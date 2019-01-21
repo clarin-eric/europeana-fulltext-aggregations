@@ -309,7 +309,7 @@ ID	Count	Types	Full text	Languages	MIME types
 11628_Ag_EU_OpenUp!_FOTO_AM	101323	"IMAGE";	"false";	"it";	"image/jpeg";
 11629_Ag_EU_OpenUp!_BGBMII	142387	"IMAGE";	"false";	"de";	"image/jpeg";
 11630_Ag_EU_OpenUp!_SCHWEINFURTHBOTANICALDRAWINGS	620	"IMAGE";	"false";	"en";	
-11631_Ag_EU_OpenUp!_MOOSATLAS	818	"IMAGE";	"false";	"de";	
+11631_Ag_EU_OpenUp_MOOSATLAS	817	"IMAGE";	"true";	"en";	"image/jpeg";"text/html";
 11632_Ag_EU_OpenUp!_FMNH	15902	"IMAGE";	"false";	"de";	
 11633_Ag_EU_OpenUp!_GZU	10116	"IMAGE";	"false";	"en";	"image/jpeg";"image/png";
 11634_Ag_EU_OpenUp!_AWI	568	"IMAGE";	"false";	"de";	"image/jpeg";
@@ -333,6 +333,8 @@ ID	Count	Types	Full text	Languages	MIME types
 11654_Ag_EU_OpenUp!_BATCH3:NBCNL_DWCA	499792	"IMAGE";	"false";	"en";	
 11655_Ag_EU_OpenUp!_BATCH2:NBCNL_DWCA	419000	"IMAGE";	"false";	"en";	
 11656_Ag_EU_OpenUp!_BATCH1:NBCNL_DWCA	494800	"IMAGE";	"false";	"en";	
+12_EKT_Pandektis	23956	"IMAGE";	"true";"false";	"el";	"text/html";"image/jpeg";
+13_EKT_Onassis	7980	"IMAGE";	"true";	"el";	"image/jpeg";"text/plain";
 15401_L_IE_IMC_imcbooks	2	"TEXT";	"false";	"mul";	
 15403_L_IE_IMC_cbl	186	"IMAGE";	"false";	"en";	
 15405_L_IE_IMC_doegen	386	"SOUND";	"false";	"mul";	"image/jpeg";
@@ -345,7 +347,7 @@ ID	Count	Types	Full text	Languages	MIME types
 15414_Ag_IE_IMC_niah	40530	"IMAGE";	"false";	"en";	"image/jpeg";
 15415_L_IE_IMC_cce	22	"SOUND";"TEXT";	"false";	"mul";	"audio/mpeg";
 15416_L_IE_IMC_oireachtas	1568	"TEXT";	"true";"false";	"en";	"application/pdf";
-15501_Ag_AT_Kulturpool_Imareal	19743	"IMAGE";	"false";	"de";	"image/jpeg";
+15501_Ag_AT_Kulturpool_Imareal	19858	"IMAGE";	"true";	"de";	"text/html";
 15502_Ag_AT_Kulturpool_Khm	8913	"IMAGE";	"false";	"de";	"image/jpeg";
 15503_Ag_AT_Kulturpool_khm_fs	15235	"IMAGE";	"false";	"de";	"image/jpeg";
 15504_Ag_AT_Kulturpool_khm_vf	2028	"IMAGE";	"false";	"de";	"image/jpeg";
@@ -383,7 +385,7 @@ ID	Count	Types	Full text	Languages	MIME types
 2020126_Ag_SI_Nat.EContentAgg_newspapers-part1	56278	"TEXT";	"true";"false";	"sl";	"application/pdf";
 2020127_Ag_SI_Nat.EContentAgg_Books	50	"TEXT";	"false";"true";	"sl";	"application/pdf";
 2020128_Ag_SI_Nat.EContentAgg_newspapers-part2	22773	"TEXT";	"true";"false";	"sl";	"application/pdf";
-2020601_Ag_ErsterWeltkrieg_EU	31746	"TEXT";"IMAGE";"3D";"VIDEO";"SOUND";	"false";"true";	"mul";	"image/jpeg";"application/pdf";"image/tiff";"image/png";"image/x-ms-bmp";"image/gif";"audio/mpeg";"video/x-m4v";"video/mp4";"text/plain";"video/quicktime";"application/rtf";"video/x-msvideo";"image/vnd.adobe.photoshop";"video/mpeg";
+2020601_Ag_ErsterWeltkrieg_EU	31745	"TEXT";"IMAGE";"3D";"VIDEO";"SOUND";	"false";"true";	"mul";	"image/jpeg";"application/pdf";"image/tiff";"image/png";"image/x-ms-bmp";"image/gif";"audio/mpeg";"video/x-m4v";"video/mp4";"text/plain";"video/quicktime";"application/rtf";"video/x-msvideo";"image/vnd.adobe.photoshop";"video/mpeg";
 2020701_Ag_EU_CARARE_SNS	304	"IMAGE";	"false";"true";	"it";	"image/jpeg";"application/pdf";
 2020702_Ag_EU_CARARE_SNHB	497757	"TEXT";	"false";	"sv";	"image/jpeg";
 2020703_Ag_EU_CARARE_Ceti	3944	"IMAGE";	"false";"true";	"el";	"image/jpeg";"application/pdf";
@@ -549,8 +551,8 @@ ID	Count	Types	Full text	Languages	MIME types
 2021753_Cy_CUT_365	4	"TEXT";	"false";	"el";	
 2021754_Cy_CUT_37	597	"IMAGE";	"false";	"el";	"image/jpeg";"image/png";"image/tiff";
 2021755_Cy_CUT_77	699	"IMAGE";	"false";	"el";	"image/jpeg";"image/tiff";
-2021801_Ag_LT_SNL_Archival_documents	4563	"TEXT";	"false";	"lt";	"image/jpeg";
-2021802_Ag_LT_SNL_Art	37140	"IMAGE";	"false";	"lt";	"image/jpeg";
+2021801_Ag_LT_SNL_Archival_documents	4562	"TEXT";	"true";"false";	"lt";	"image/jpeg";
+2021802_Ag_LT_SNL_Art	40366	"IMAGE";	"true";"false";	"lt";	"image/jpeg";"text/html";
 2021803_Ag_LT_SNL_documents_and_manuscripts	43774	"TEXT";"IMAGE";	"false";	"lt";	"image/jpeg";"image/png";
 2021901_Ag_HIC_1914-1918	255	"IMAGE";	"false";	"pt";	"image/jpeg";
 2022001_Ag_EU_HOPE_AMSAB60-56	8370	"TEXT";	"false";	"mul";	
@@ -889,7 +891,7 @@ ID	Count	Types	Full text	Languages	MIME types
 2024916_Ag_EU_EuropeanaPhotography_Slovakia_1017	9901	"IMAGE";	"false";	"sk";	"image/jpeg";
 2024917_Ag_EU_EuropeanaPhotography_Denmark_1025	25026	"IMAGE";	"false";	"da";	
 2024918_Ag_EU_EuropeanaPhotography_Israel_1070	1031	"IMAGE";	"false";	"en";	
-2024919_Ag_EU_Photoconsortium_eSpace_Promoter	514	"IMAGE";	"false";	"it";	"image/jpeg";
+2024919_Ag_EU_Photoconsortium_eSpace_Promoter	635	"IMAGE";	"true";"false";	"en";	"image/jpeg";"text/html";
 2025901_Ag_DE_1989	5601	"IMAGE";"TEXT";"VIDEO";	"false";	"de";	"image/jpeg";"video/mp4";"video/quicktime";
 2025902_Ag_EU_1989_Poland	328	"IMAGE";	"false";	"pl";	"image/jpeg";"image/png";
 2025903_Ag_EU_1989_Lithuania	319	"IMAGE";	"false";	"lt";	"image/jpeg";
@@ -1035,7 +1037,7 @@ ID	Count	Types	Full text	Languages	MIME types
 2048208_Ag_EU_EuropeanaFashion_1015	37955	"IMAGE";"TEXT";"VIDEO";	"false";	"mul";	"image/jpeg";"application/pdf";"text/plain";
 2048209_Ag_EU_EuropeanaFashion_1016	9910	"IMAGE";	"false";	"nl";	"image/jpeg";
 2048210_Ag_EU_EuropeanaFashion_1018	11961	"IMAGE";"TEXT";	"false";"true";	"el";	"image/jpeg";"application/pdf";
-2048211_Ag_EU_EuropeanaFashion_1019	55417	"IMAGE";	"false";	"sv";	"image/jpeg";"image/png";
+2048211_Ag_EU_EuropeanaFashion_1019	55413	"IMAGE";	"true";"false";	"sv";	"text/html";"image/jpeg";"image/png";
 2048212_Ag_EU_EuropeanaFashion_1020	484499	"IMAGE";	"false";	"mul";	"image/jpeg";
 2048213_Ag_EU_EuropeanaFashion_1023	9792	"IMAGE";	"false";	"en";	"image/jpeg";
 2048214_Ag_EU_EuropeanaFashion_1031	5616	"IMAGE";"TEXT";	"false";"true";	"sr";	"image/jpeg";"application/pdf";
@@ -1474,7 +1476,8 @@ ID	Count	Types	Full text	Languages	MIME types
 2065002_Ag_EU_Museums.EU_galerija_bozidar_jakac	214	"IMAGE";	"false";	"sl";	"image/png";
 2083601_Ag_EU_JE-JHN_leo-baeck-institute-nyc	10063	"TEXT";	"false";	"en";	"image/jpeg";
 2083602_Ag_EU_JE-JHN_bib-medem-paris	12735	"TEXT";"IMAGE";"VIDEO";	"false";"true";	"fr";	"application/pdf";"image/tiff";"image/png";"image/jpeg";
-2084002_Ag_EU_Migration_ugc	407	"IMAGE";"SOUND";"TEXT";	"false";	"en";	"image/jpeg";"image/png";"image/gif";"image/tiff";
+2084002_Ag_EU_Migration_ugc	478	"IMAGE";"SOUND";"TEXT";	"false";	"mul";	"image/jpeg";"image/png";"image/gif";
+3_EKT_Kazantzakis	2772	"IMAGE";	"true";	"el";	"text/plain";"image/jpeg";
 90402_M_NL_Rijksmuseum	337641	"IMAGE";	"false";	"nl";	"image/jpeg";
 90501_L_IT_BNCF_ManoscrittiInRete_tel	33	"TEXT";	"false";	"it";	
 90801_L_CH_NatLib_durrenmatt_dcx	100	"IMAGE";	"false";	"mul";	
