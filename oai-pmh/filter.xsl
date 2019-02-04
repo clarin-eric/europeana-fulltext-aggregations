@@ -4,8 +4,11 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns:oai="http://www.openarchives.org/OAI/2.0/"
     exclude-result-prefixes="xs oai" version="2.0">
-
-    <xsl:param name="selectionDoc" required="yes" />
+    
+    <xsl:param name="provider_uri" select="()"/>
+    <xsl:param name="config" select="document('/Users/twagoo/Downloads/config.xml')"/>
+    
+    <xsl:param name="selectionDoc" select="$config//provider[@url=$provider_uri]/recordsList" />
 
     <!-- load the index in a variable, document() can do GET requests, other HTTP verbs need an extension -->
     <xsl:variable name="idx" select="document($selectionDoc)"/>

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-PREFIX="http://data.europeana.eu/item/"
+PREFIX="http://data.europeana.eu/item"
 
 echo '<?xml version="1.0" encoding="UTF-8"?>
 <records>'

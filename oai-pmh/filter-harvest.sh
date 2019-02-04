@@ -15,7 +15,6 @@ harvest() {
 
 	echo "Collecting IDs from API"
 	${BASE_DIR}/get-filtered-record-ids.sh $@ 2>/dev/null | ${BASE_DIR}/ids2xml.sh > ${OUT_DIR}/selection.xml
-	#TODO: harvest
 }
 
 main() {
