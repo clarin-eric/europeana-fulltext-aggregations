@@ -21,27 +21,49 @@ print_usage() {
 	echo "usage: $0 --collection <collectionId> [--open] [--media] [--fulltext]"
 }
 
-make_query_url() {
-	BASE_URL="${API_URL}?wskey=${API_KEY}"
-	REQ_URL="${BASE_URL}&query=europeana_collectionName:${COLLECTION}&cursor=*&profile=minimal"
+query_api() {
+	CURSOR="$1"
+	REQ_OPTS=(--data-urlencode "wskey=${API_KEY}")
+	REQ_OPTS+=(--data-urlencode "profile=minimal")
+	REQ_OPTS+=(--data-urlencode "query=europeana_collectionName:${COLLECTION}")
 	if [ "${OPEN}" -eq 1 ]; then
-		REQ_URL="${REQ_URL}&reusability=open"
+		REQ_OPTS+=(--data-urlencode "reusability=open")
 	fi
 	if [ "${MEDIA}" -eq 1 ]; then
-		REQ_URL="${REQ_URL}&media=true"
+		REQ_OPTS+=(--data-urlencode "media=true")
 	fi
 	if [ "${FULLTEXT}" -eq 1 ]; then
-		REQ_URL="${REQ_URL}&qf=TEXT_FULLTEXT:true"
+		REQ_OPTS+=(--data-urlencode "qf=TEXT_FULLTEXT:true")
 	fi
-	echo "$REQ_URL"
+	if [ "${CURSOR}" ] && [ "${CURSOR}" != null ]; then
+		REQ_OPTS+=(--data-urlencode "cursor=${CURSOR}")
+	fi
+	echo curl -GL "${REQ_OPTS[@]}" "${API_URL}" > /dev/stderr
+	curl -GL "${REQ_OPTS[@]}" "${API_URL}" 
 }
 
 fetch_ids() {
-	REQ_URL=$(make_query_url)
-	echo "Request URL: $REQ_URL"
-	#TODO: make and process request
-}
+	#make and process request
+	TMP_FILE=$(mktemp)
 
+	NEXT_CURSOR=\*
+	while [ "${NEXT_CURSOR}" != null ]; do
+		echo "Next cursor ${NEXT_CURSOR}" > /dev/stderr
+		#construct request URL
+		if ! query_api "$NEXT_CURSOR" > $TMP_FILE; then
+			echo "Error while calling Europeana API"
+			exit 1
+		fi
+		
+		jq '.items|.[]|.id' < $TMP_FILE
+
+		NEXT_CURSOR=$(jq -r ' .nextCursor' < $TMP_FILE)
+
+		cat $TMP_FILE > /dev/stderr
+	done
+	#remove temp response
+	rm $TMP_FILE
+}
 
 main() {
 	while [[ $# -gt 0 ]] && [[ ."$1" = .--* ]] ;
@@ -67,5 +89,6 @@ main() {
 
 	fetch_ids $COLLECTION $OPEN $MEDIA $FULLTEXT
 }
+
 
 main $@
