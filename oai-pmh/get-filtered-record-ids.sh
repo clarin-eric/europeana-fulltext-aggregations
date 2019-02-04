@@ -55,7 +55,7 @@ fetch_ids() {
 			exit 1
 		fi
 		
-		jq '.items|.[]|.id' < $TMP_FILE
+		jq -r '.items|.[]|.id' < $TMP_FILE
 
 		NEXT_CURSOR=$(jq -r ' .nextCursor' < $TMP_FILE)
 
