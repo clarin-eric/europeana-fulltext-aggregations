@@ -6,7 +6,7 @@
     exclude-result-prefixes="xs oai" version="2.0">
     
     <xsl:param name="provider_uri" select="()"/>
-    <xsl:param name="config" select="document('/Users/twagoo/Downloads/config.xml')"/>
+    <xsl:param name="config" select="()"/>
     
     <xsl:param name="selectionDoc" select="$config//provider[@url=$provider_uri]/recordsList" />
 
