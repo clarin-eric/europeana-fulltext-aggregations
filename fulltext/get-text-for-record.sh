@@ -8,8 +8,6 @@ BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 TMP_DIR="$(mktemp -d)"
 OUT_DIR="${BASE_DIR}/out"
 
-mkdir -p "${OUT_DIR}"
-
 if [ -e "${BASE_DIR}/env.sh" ]; then
         source ${BASE_DIR}/env.sh
 else
@@ -22,7 +20,7 @@ if ! [ "${API_URL}" ]; then
 fi
 
 print_usage() {
-        echo "usage: $0 --collection <collectionId> --record <recordId>"
+        echo "usage: $0 --collection <collectionId> --record <recordId> [--outdir <outdir>]"
 }
 
 get_anno_pages_from_manifest() {
@@ -50,7 +48,9 @@ fetch_text() {
 	MANIFEST_URL="${API_URL}/presentation/${COLLECTION}/${RECORD}/manifest"
 	
 	RECORD_OUT_DIR="${OUT_DIR}/${COLLECTION}/${RECORD}"
-	mkdir -p "${RECORD_OUT_DIR}"
+	if ! mkdir -p "${RECORD_OUT_DIR}"; then
+		fail "Output directory could not be created"
+	fi
 	
 	TMP_OUT=$(make_temp_file manifest)
 	echo "Getting manifest for ${COLLECTION}/${RECORD}" > /dev/stderr
@@ -61,6 +61,7 @@ fetch_text() {
 		cat "$TMP_OUT" \
 			| get_anno_pages_from_manifest \
 			| while read ANNOPAGE; do
+				# get annotation page document
 				TMP_OUT=$(make_temp_file anno)
 				echo "...getting annotation page" > /dev/stderr
 				if ! curl -sL "$ANNOPAGE" > "$TMP_OUT"; then
@@ -71,11 +72,13 @@ fetch_text() {
 				fi
 			done \
 			| while read FT_RESOURCE; do
+				# get full text resource document
 				TMP_OUT=$(make_temp_file ft)
 				echo "... ...getting full text resource" > /dev/stderr
 				if ! curl -sL "$FT_RESOURCE" > "$TMP_OUT"; then
 					fail "Failed to read full text resource page at ${FT_RESOURCE}"
 				else
+					# extract full text content and write to file
 					OUT_FILE="${RECORD_OUT_DIR}/page$((PAGE_COUNT++)).txt"
 					echo "... ... ...writing output to ${OUT_FILE}"
 					cat "$TMP_OUT" \
@@ -101,6 +104,7 @@ main() {
                                 ;;
                         "--collection" )        COLLECTION="$1"; shift;;
                         "--record" )            RECORD="$1"; shift;;
+                        "--outdir" )            OUT_DIR="$1"; shift;;
                 esac
         done
 
