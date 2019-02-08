@@ -6,6 +6,9 @@
 
 BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 TMP_DIR="$(mktemp -d)"
+OUT_DIR="${BASE_DIR}/out"
+
+mkdir -p "${OUT_DIR}"
 
 if [ -e "${BASE_DIR}/env.sh" ]; then
         source ${BASE_DIR}/env.sh
@@ -30,7 +33,13 @@ get_anno_pages_from_manifest() {
 
 get_full_text_resource_from_anno() {
 	if ! jq -r '.resources[]|select(.dcType=="Page")|.resource."@id"'; then
-		fail "Failed to full text resource"
+		fail "Failed to get full text resource"
+	fi
+}
+
+get_full_text_content_from_resource() {
+	if ! jq -r '.value'; then
+		fail "Failed to get full text value"
 	fi
 }
 
@@ -40,23 +49,40 @@ fetch_text() {
 	
 	MANIFEST_URL="${API_URL}/presentation/${COLLECTION}/${RECORD}/manifest"
 	
+	RECORD_OUT_DIR="${OUT_DIR}/${COLLECTION}/${RECORD}"
+	mkdir -p "${RECORD_OUT_DIR}"
+	
 	TMP_OUT=$(make_temp_file manifest)
 	echo "Getting manifest for ${COLLECTION}/${RECORD}" > /dev/stderr
 	if ! curl -sL "$MANIFEST_URL" > "$TMP_OUT"; then
 		fail "Failed to read manifest at ${MANIFEST_URL}"
 	else
+		PAGE_COUNT=0
 		cat "$TMP_OUT" \
 			| get_anno_pages_from_manifest \
 			| while read ANNOPAGE; do
 				TMP_OUT=$(make_temp_file anno)
-				echo "...Getting annotation page" > /dev/stderr
+				echo "...getting annotation page" > /dev/stderr
 				if ! curl -sL "$ANNOPAGE" > "$TMP_OUT"; then
 					fail "Failed to read annotation page at ${ANNOPAGE}"
 				else
 					cat "$TMP_OUT" \
 						| get_full_text_resource_from_anno
 				fi
+			done \
+			| while read FT_RESOURCE; do
+				TMP_OUT=$(make_temp_file ft)
+				echo "... ...getting full text resource" > /dev/stderr
+				if ! curl -sL "$FT_RESOURCE" > "$TMP_OUT"; then
+					fail "Failed to read full text resource page at ${FT_RESOURCE}"
+				else
+					OUT_FILE="${RECORD_OUT_DIR}/page$((PAGE_COUNT++)).txt"
+					echo "... ... ...writing output to ${OUT_FILE}"
+					cat "$TMP_OUT" \
+						| get_full_text_content_from_resource > "$OUT_FILE"
+				fi
 			done
+			
 	fi	
 }
 
