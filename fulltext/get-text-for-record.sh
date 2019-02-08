@@ -5,6 +5,7 @@
 # Author: Twan Goosen <twan@clarin.eu>
 
 BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
+TMP_DIR="$(mktemp -d)"
 
 if [ -e "${BASE_DIR}/env.sh" ]; then
         source ${BASE_DIR}/env.sh
@@ -17,25 +18,8 @@ if ! [ "${API_URL}" ]; then
         exit 1
 fi
 
-TMP_FILES=()
-
-
 print_usage() {
         echo "usage: $0 --collection <collectionId> --record <recordId>"
-}
-
-clean_up_tmp() {
-	for f in "${TMP_FILES[@]}"; do
-		if [ -e "$f" ]; then
-			rm "$f"
-		fi
-	done
-}
-
-fail() {
-	echo "ERROR: $@"
-	clean_up_tmp
-	exit 1
 }
 
 get_anno_pages_from_manifest() {
@@ -56,27 +40,24 @@ fetch_text() {
 	
 	MANIFEST_URL="${API_URL}/presentation/${COLLECTION}/${RECORD}/manifest"
 	
-	TMP_MANIFEST_OUT=$(mktemp)
-	TMP_FILES+=($TMP_MANIFEST_OUT)
+	TMP_OUT=$(make_temp_file manifest)
 	echo "Getting manifest for ${COLLECTION}/${RECORD}" > /dev/stderr
-	if ! curl -sL "$MANIFEST_URL" > "$TMP_MANIFEST_OUT"; then
+	if ! curl -sL "$MANIFEST_URL" > "$TMP_OUT"; then
 		fail "Failed to read manifest at ${MANIFEST_URL}"
 	else
-		cat "$TMP_MANIFEST_OUT" \
+		cat "$TMP_OUT" \
 			| get_anno_pages_from_manifest \
 			| while read ANNOPAGE; do
-				TMP_ANNO_OUT=$(mktemp)
-				TMP_FILES+=($TMP_ANNO_OUT)
+				TMP_OUT=$(make_temp_file anno)
 				echo "...Getting annotation page" > /dev/stderr
-				if ! curl -sL "$ANNOPAGE" > "$TMP_ANNO_OUT"; then
+				if ! curl -sL "$ANNOPAGE" > "$TMP_OUT"; then
 					fail "Failed to read annotation page at ${ANNOPAGE}"
 				else
-					cat "$TMP_ANNO_OUT" \
+					cat "$TMP_OUT" \
 						| get_full_text_resource_from_anno
 				fi
 			done
-	fi
-	
+	fi	
 }
 
 main() {
@@ -105,5 +86,32 @@ main() {
         fetch_text $COLLECTION $RECORD
         clean_up_tmp
 }
+
+# Utils
+
+clean_up_tmp() {
+	if [ -d "${TMP_DIR}" ]; then
+		rm -rf "${TMP_DIR}"
+	fi
+}
+
+make_temp_file() {
+	mkdir -p  "${TMP_DIR}"
+	TMP_FILE_NAME="${TMP_DIR}/$1-$(date +%Y%m%d%H%M%S)"
+	if ! [ -e "${TMP_FILE_NAME}" ] && touch "${TMP_FILE_NAME}";
+		then echo "${TMP_FILE_NAME}"
+	else
+		echo "Could not make temp file. Trying mktemp" > /dev/stderr
+		mktemp
+	fi
+}
+
+fail() {
+	echo "ERROR: $@" > /dev/stderr
+	clean_up_tmp
+	exit 1
+}
+
+# Run main
 
 main $@
