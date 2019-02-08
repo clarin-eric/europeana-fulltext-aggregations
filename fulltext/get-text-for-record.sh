@@ -48,9 +48,6 @@ fetch_text() {
 	MANIFEST_URL="${API_URL}/presentation/${COLLECTION}/${RECORD}/manifest"
 	
 	RECORD_OUT_DIR="${OUT_DIR}/${COLLECTION}/${RECORD}"
-	if ! mkdir -p "${RECORD_OUT_DIR}"; then
-		fail "Output directory could not be created"
-	fi
 	
 	TMP_OUT=$(make_temp_file manifest)
 	echo "Getting manifest for ${COLLECTION}/${RECORD}" > /dev/stderr
@@ -78,6 +75,11 @@ fetch_text() {
 				if ! curl -sL "$FT_RESOURCE" > "$TMP_OUT"; then
 					fail "Failed to read full text resource page at ${FT_RESOURCE}"
 				else
+					# make sure output directory is there
+					if ! mkdir -p "${RECORD_OUT_DIR}"; then
+						fail "Output directory could not be created"
+					fi
+					
 					# extract full text content and write to file
 					OUT_FILE="${RECORD_OUT_DIR}/page$((PAGE_COUNT++)).txt"
 					echo "... ... ...writing output to ${OUT_FILE}"
