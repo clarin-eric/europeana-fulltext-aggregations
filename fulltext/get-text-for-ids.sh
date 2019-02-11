@@ -28,10 +28,9 @@ main() {
 	fi
 	
 	echo "Writing to $OUTPUT_DIR" > /dev/stderr
-	jq  -r '.items[]|.id' \
-		| while read RECORD_ID; do
-			get_text_for_record_id $RECORD_ID
-		done
+	while read RECORD_ID; do
+		get_text_for_record_id $RECORD_ID
+	done
 }
 
 main $@
