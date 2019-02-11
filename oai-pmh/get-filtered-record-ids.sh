@@ -26,6 +26,7 @@ query_api() {
 	REQ_OPTS=(--data-urlencode "wskey=${API_KEY}")
 	REQ_OPTS+=(--data-urlencode "profile=minimal")
 	REQ_OPTS+=(--data-urlencode "query=europeana_collectionName:${COLLECTION}")
+	REQ_OPTS+=(--data-urlencode "rows=500")
 	if [ "${OPEN}" -eq 1 ]; then
 		REQ_OPTS+=(--data-urlencode "reusability=open")
 	fi
