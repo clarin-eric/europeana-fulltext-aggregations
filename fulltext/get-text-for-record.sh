@@ -59,20 +59,20 @@ fetch_text() {
 			| get_anno_pages_from_manifest \
 			| while read ANNOPAGE; do
 				# get annotation page document
-				TMP_OUT=$(make_temp_file anno)
+				TMP_OUT_ANNO=$(make_temp_file anno)
 				echo "...getting annotation page" > /dev/stderr
-				if ! curl -sL "$ANNOPAGE" > "$TMP_OUT"; then
+				if ! curl -sL "$ANNOPAGE" > "$TMP_OUT_ANNO"; then
 					fail "Failed to read annotation page at ${ANNOPAGE}"
 				else
-					cat "$TMP_OUT" \
+					cat "$TMP_OUT_ANNO" \
 						| get_full_text_resource_from_anno
-				fi
+				fi; rm "${TMP_OUT_ANNO}"
 			done \
 			| while read FT_RESOURCE; do
 				# get full text resource document
-				TMP_OUT=$(make_temp_file ft)
+				TMP_OUT_FT=$(make_temp_file ft)
 				echo "... ...getting full text resource" > /dev/stderr
-				if ! curl -sL "$FT_RESOURCE" > "$TMP_OUT"; then
+				if ! curl -sL "$FT_RESOURCE" > "$TMP_OUT_FT"; then
 					fail "Failed to read full text resource page at ${FT_RESOURCE}"
 				else
 					# make sure output directory is there
@@ -83,12 +83,12 @@ fetch_text() {
 					# extract full text content and write to file
 					OUT_FILE="${RECORD_OUT_DIR}/page$((PAGE_COUNT++)).txt"
 					echo "... ... ...writing output to ${OUT_FILE}"
-					cat "$TMP_OUT" \
+					cat "$TMP_OUT_FT" \
 						| get_full_text_content_from_resource > "$OUT_FILE"
-				fi
+				fi; rm "${TMP_OUT_FT}"
 			done
 			
-	fi	
+	fi; rm "${TMP_OUT}"
 }
 
 main() {

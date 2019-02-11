@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Script to get full text for the records in a Europeana search API result document
+# Script to get full text for identified records
 #
 # Author: Twan Goosen <twan@clarin.eu>
 
