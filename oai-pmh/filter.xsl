@@ -2,13 +2,12 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
     xmlns:xs="http://www.w3.org/2001/XMLSchema"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xmlns:oai="http://www.openarchives.org/OAI/2.0/"
-    exclude-result-prefixes="xs oai" version="2.0">
-    
+    xmlns:oai="http://www.openarchives.org/OAI/2.0/" exclude-result-prefixes="xs oai" version="2.0">
+
     <xsl:param name="provider_uri" select="()"/>
     <xsl:param name="config" select="()"/>
-    
-    <xsl:param name="selectionDoc" select="$config//provider[@url=$provider_uri]/recordsList" />
+
+    <xsl:param name="selectionDoc" select="$config//provider[@url = $provider_uri]/recordsList"/>
 
     <!-- load the index in a variable, document() can do GET requests, other HTTP verbs need an extension -->
     <xsl:variable name="idx" select="document($selectionDoc)"/>
@@ -28,14 +27,21 @@
 
     <xsl:template match="oai:OAI-PMH">
 
-        <OAI-PMH
-            xmlns="http://www.openarchives.org/OAI/2.0/"
+        <OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/"
             xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
-            <xsl:copy-of select="oai:responseDate" />
-            <xsl:copy-of select="oai:request" />
-            <ListRecords>
-                <xsl:apply-templates select="/oai:OAI-PMH/oai:ListRecords/oai:record"/>
-            </ListRecords>
+            <xsl:copy-of select="oai:responseDate"/>
+            <xsl:copy-of select="oai:request"/>
+
+            <xsl:if test="/oai:OAI-PMH/oai:GetRecord">
+                <GetRecord>
+                    <xsl:apply-templates select="/oai:OAI-PMH/oai:GetRecord/oai:record"/>
+                </GetRecord>
+            </xsl:if>
+            <xsl:if test="/oai:OAI-PMH/oai:ListRecords">
+                <ListRecords>
+                    <xsl:apply-templates select="/oai:OAI-PMH/oai:ListRecords/oai:record"/>
+                </ListRecords>
+            </xsl:if>
         </OAI-PMH>
 
     </xsl:template>
