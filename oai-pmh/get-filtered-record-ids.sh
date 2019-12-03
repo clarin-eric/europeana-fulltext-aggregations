@@ -43,7 +43,7 @@ query_api() {
 	if [ "${CURSOR}" ] && [ "${CURSOR}" != null ]; then
 		REQ_OPTS+=(--data-urlencode "cursor=${CURSOR}")
 	fi
-	echo curl -GL "${REQ_OPTS[@]}" "${API_URL}" > /dev/stderr
+	echo curl -GL "${REQ_OPTS[@]}" "${API_URL}" >&2
 	curl -GL "${REQ_OPTS[@]}" "${API_URL}" 
 }
 
@@ -53,7 +53,7 @@ fetch_ids() {
 
 	NEXT_CURSOR=\*
 	while [ "${NEXT_CURSOR}" != null ]; do
-		echo "Next cursor ${NEXT_CURSOR}" > /dev/stderr
+		echo "Next cursor ${NEXT_CURSOR}" >&2
 		#construct request URL
 		if ! query_api "$NEXT_CURSOR" > $TMP_FILE; then
 			echo "Error while calling Europeana API"
@@ -64,7 +64,7 @@ fetch_ids() {
 
 		NEXT_CURSOR=$(jq -r ' .nextCursor' < $TMP_FILE)
 
-		cat $TMP_FILE > /dev/stderr
+		cat $TMP_FILE >&2
 	done
 	#remove temp response
 	rm $TMP_FILE
