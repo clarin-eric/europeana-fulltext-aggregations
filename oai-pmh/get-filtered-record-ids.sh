@@ -17,9 +17,10 @@ OPEN=0
 MEDIA=0
 TEXT=0
 FULLTEXT=0
+SOUND=0
 
 print_usage() {
-	echo "usage: $0 --collection <collectionId> [--open] [--media] [--text] [--fulltext]"
+	echo "usage: $0 --collection <collectionId> [--open] [--media] [--text] [--sound] [--fulltext]"
 }
 
 query_api() {
@@ -36,6 +37,9 @@ query_api() {
 	fi
 	if [ "${TEXT}" -eq 1 ]; then
 		REQ_OPTS+=(--data-urlencode "qf=TYPE:TEXT")
+	fi
+	if [ "${SOUND}" -eq 1 ]; then
+		REQ_OPTS+=(--data-urlencode "qf=TYPE:SOUND")
 	fi
 	if [ "${FULLTEXT}" -eq 1 ]; then
 		REQ_OPTS+=(--data-urlencode "qf=TEXT_FULLTEXT:true")
@@ -84,6 +88,7 @@ main() {
 			"--open" ) 		OPEN=1 ;;
 			"--media" ) 		MEDIA=1 ;;
 			"--text" ) 		TEXT=1 ;;
+			"--sound" ) 		SOUND=1 ;;
 			"--fulltext" ) 		FULLTEXT=1 ;;
 		esac
 	done
