@@ -18,9 +18,10 @@ MEDIA=0
 TEXT=0
 FULLTEXT=0
 SOUND=0
+VIDEO=0
 
 print_usage() {
-	echo "usage: $0 --collection <collectionId> [--open] [--media] [--text] [--sound] [--fulltext]"
+	echo "usage: $0 --collection <collectionId> [--open] [--media] [--text] [--sound] [--video] [--fulltext]"
 }
 
 query_api() {
@@ -40,6 +41,9 @@ query_api() {
 	fi
 	if [ "${SOUND}" -eq 1 ]; then
 		REQ_OPTS+=(--data-urlencode "qf=TYPE:SOUND")
+	fi
+	if [ "${VIDEO}" -eq 1 ]; then
+		REQ_OPTS+=(--data-urlencode "qf=TYPE:VIDEO")
 	fi
 	if [ "${FULLTEXT}" -eq 1 ]; then
 		REQ_OPTS+=(--data-urlencode "qf=TEXT_FULLTEXT:true")
@@ -89,6 +93,7 @@ main() {
 			"--media" ) 		MEDIA=1 ;;
 			"--text" ) 		TEXT=1 ;;
 			"--sound" ) 		SOUND=1 ;;
+			"--video" ) 		VIDEO=1 ;;
 			"--fulltext" ) 		FULLTEXT=1 ;;
 		esac
 	done
