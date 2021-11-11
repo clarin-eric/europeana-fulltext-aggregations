@@ -1,0 +1,7 @@
+version: "3.9"
+services:
+  europeana-aggregator:
+    image: europeana-aggregator:latest
+    build: ./image
+
+    
