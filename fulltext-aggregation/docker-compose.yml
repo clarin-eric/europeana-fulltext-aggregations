@@ -3,5 +3,8 @@ services:
   europeana-aggregator:
     image: europeana-aggregator:latest
     build: ./image
+    environment:
+      - API_KEY
+      - API_URL
 
     

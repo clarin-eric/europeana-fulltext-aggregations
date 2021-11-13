@@ -1,8 +1,14 @@
-import sys
 import os
+import sys
+import requests
+import json
 
-apiUrl = 'https://www.europeana.eu/api/v2/search.json'
+apiUrl = os.environ.get('API_URL')
 apiKey = os.environ.get('API_KEY')
+
+if apiUrl is None:
+    print("ERROR: API_KEY variable not set. Using default.")
+    exit(1)
 
 if apiKey is None:
     print("Error: API_KEY variable not set")
@@ -14,8 +20,16 @@ if len(sys.argv) <= 1:
 
 collectionId = sys.argv[1]
 
-collectionItemsUrl = apiUrl+'?wskey='+apiKey + '&query=europeana_collectionName:'+collectionId+'*&rows=10&fields=id'
+collectionItemsUrl = apiUrl+'?wskey=' + apiKey\
+                     + '&rows=10&profile=minimal&query=europeana_collectionName:' \
+                     + collectionId+'*'
 
-print(collectionItemsUrl)
+response = requests.get(collectionItemsUrl).text
+json = json.loads(response)
 
-# TODO: retrieve collection identifiers
+# TODO: extract collection identifiers
+# TODO: repeat for all pages
+
+print(json)
+
+
