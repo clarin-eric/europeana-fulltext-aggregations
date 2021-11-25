@@ -6,7 +6,6 @@ import urllib
 import logging
 
 do_save_metadata = True
-records_limit = 10
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +17,9 @@ def main():
     search_api_url = get_mandatory_env_var('SEARCH_API_URL')
     search_api_key = get_mandatory_env_var('SEARCH_API_KEY')
     iiif_api_url = get_mandatory_env_var('IIIF_API_URL')
+    records_limit = int(get_optional_env_var('RECORD_RETRIEVAL_LIMIT', "1"))
+    if records_limit < 0:
+        records_limit = None
 
     output_base_dir = os.environ.get('OUTPUT_DIR')
     if output_base_dir is None:
@@ -32,7 +34,7 @@ def main():
     metadata_dir = f"{output_base_dir}/{collection_id}/metadata"
     os.makedirs(name=metadata_dir, exist_ok=True)
 
-    ids = retrieve_and_store_records(search_api_key, search_api_url, collection_id, metadata_dir)
+    ids = retrieve_and_store_records(search_api_key, search_api_url, collection_id, metadata_dir, records_limit)
 
     fulltext_dir = f"{output_base_dir}/{collection_id}/fulltext"
     os.makedirs(name=fulltext_dir, exist_ok=True)
@@ -42,7 +44,7 @@ def main():
     # TODO: create CMDI metadata for full text collection
 
 
-def retrieve_and_store_records(api_key, api_url, collection_id, target_dir):
+def retrieve_and_store_records(api_key, api_url, collection_id, target_dir, records_limit):
     """
     Retrieves the records for all objects in the specified collection, stores the JSON representations to disk
     and produces a list of identifiers for all retrieved records
@@ -50,9 +52,14 @@ def retrieve_and_store_records(api_key, api_url, collection_id, target_dir):
     :param api_url:
     :param collection_id:
     :param target_dir:
+    :param records_limit:
     :return: list of identifiers
     """
     logger.info(f"Starting retrieval of record ids from collection {collection_id} from API at {api_url}")
+    if records_limit is None:
+        logger.info("No record retrieval limit is set, will attempt to retrieve ALL records from the collection!")
+    else:
+        logger.info(f"Record retrieval limit has been set to {records_limit}, will not attempt to retrieve more.")
 
     rows = 50
     cursor = "*"
@@ -167,6 +174,14 @@ def get_mandatory_env_var(name):
         print("ERROR: SEARCH_API_URL variable not set. Using default.")
         exit(1)
     return value;
+
+
+def get_optional_env_var(name, default=None):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    else:
+        return value
 
 
 if __name__ == "__main__":

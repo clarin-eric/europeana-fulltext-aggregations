@@ -7,6 +7,7 @@ services:
       - SEARCH_API_URL
       - SEARCH_API_KEY
       - IIIF_API_URL
+      - RECORD_RETRIEVAL_LIMIT
       - OUTPUT_DIR=/output
     volumes:
       - "${OUTPUT_DIR}:/output"

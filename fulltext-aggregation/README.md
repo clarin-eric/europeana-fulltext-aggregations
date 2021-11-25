@@ -17,3 +17,4 @@ Make sure to set the following environment variables:
 - `SEARCH_API_KEY` - personal key that gives access to the Europeana Search API
 - `IIIF_API_URL` - base URL of the Europeana IIIF service
 - `OUTPUT_DIR` - target directory for retrieved content
+- `RECORD_RETRIEVAL_LIMIT` - maximum number of records to retrieve; set to -1 for no limit
