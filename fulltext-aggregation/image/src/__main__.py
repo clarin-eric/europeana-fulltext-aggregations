@@ -13,19 +13,19 @@ def main():
     logging.basicConfig()
     logger.setLevel(logging.INFO)
 
-    api_url = os.environ.get('API_URL')
-    api_key = os.environ.get('API_KEY')
+    search_api_url = os.environ.get('SEARCH_API_URL')
+    search_api_key = os.environ.get('SEARCH_API_KEY')
 
     output_base_dir = os.environ.get('OUTPUT_DIR')
     if output_base_dir is None:
         output_base_dir = os.curdir
 
-    if api_url is None:
-        print("ERROR: API_URL variable not set. Using default.")
+    if search_api_url is None:
+        print("ERROR: SEARCH_API_URL variable not set. Using default.")
         exit(1)
 
-    if api_key is None:
-        print("Error: API_KEY variable not set")
+    if search_api_key is None:
+        print("Error: SEARCH_API_KEY variable not set")
         exit(1)
 
     if len(sys.argv) <= 1:
@@ -36,7 +36,7 @@ def main():
     target_dir = f"{output_base_dir}/{collection_id}"
     os.makedirs(name=target_dir, exist_ok=True)
 
-    ids = retrieve_and_store_records(api_key, api_url, target_dir, collection_id)
+    ids = retrieve_and_store_records(search_api_key, search_api_url, target_dir, collection_id)
 
     print(ids)
 
@@ -52,6 +52,10 @@ def retrieve_and_store_records(api_key, api_url, target_dir, collection_id):
     :return: list of identifiers
     """
     logger.info(f"Starting retrieval of record ids from collection {collection_id} from API at {api_url}")
+
+    metadata_dir = f"{target_dir}/metadata"
+    os.makedirs(name=metadata_dir, exist_ok=True)
+
     rows = 50
     cursor = "*"
     ids = []
@@ -64,7 +68,7 @@ def retrieve_and_store_records(api_key, api_url, target_dir, collection_id):
         items = collection_items_response["items"]
         ids += [item["id"] for item in items]
         logger.debug(f"{len(ids)} ids collected so far (cursor: {cursor})")
-        save_records_to_file(target_dir, items)
+        save_records_to_file(metadata_dir, items)
     logger.info(f"Done. Collected {len(ids)} ids from collection {collection_id}")
     return ids
 
