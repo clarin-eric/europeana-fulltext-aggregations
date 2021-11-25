@@ -3,9 +3,15 @@ import sys
 import requests
 import json
 import urllib
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def main():
+    logging.basicConfig()
+    logger.setLevel(logging.INFO)
+
     api_url = os.environ.get('API_URL')
     api_key = os.environ.get('API_KEY')
 
@@ -23,27 +29,29 @@ def main():
 
     collection_id = sys.argv[1]
 
+    ids = retrieve_ids(api_key, api_url, collection_id)
+
+    print(ids)
+
+
+def retrieve_ids(api_key, api_url, collection_id):
+    logger.info(f"Starting retrieval of record ids from collection {collection_id} from API at {api_url}")
     rows = 50
     cursor = "*"
-    total_results = -1
     ids = []
     while cursor is not None:
-        collection_items_response = get_collection_items(api_url, api_key, collection_id, rows, cursor)
+        collection_items_response = retrieve_records(api_url, api_key, collection_id, rows, cursor)
         if "error" in collection_items_response:
             print(f"Error: {collection_items_response['error']}")
             exit(1)
         cursor = collection_items_response.get("nextCursor")
         ids += [item["id"] for item in collection_items_response["items"]]
-        print(f"{len(ids)} ids collected (cursor: {cursor})")
+        logger.debug(f"{len(ids)} ids collected (cursor: {cursor})")
+    logger.info(f"Done. Collected {len(ids)} ids from collection {collection_id}")
+    return ids
 
 
-    # TODO: extract collection identifiers
-    # TODO: repeat for all pages
-
-    print(ids)
-
-
-def get_collection_items(api_url, api_key, collection_id, rows, cursor):
+def retrieve_records(api_url, api_key, collection_id, rows, cursor):
     params = {
         'wskey': api_key,
         'rows': rows,
@@ -51,7 +59,9 @@ def get_collection_items(api_url, api_key, collection_id, rows, cursor):
         'query': f"europeana_collectionName:{collection_id}*",
         'profile': 'minimal'}
     collection_items_url = f"{api_url}?{urllib.parse.urlencode(params)}"
+    logger.debug(f"Making API request: {collection_items_url}")
     response = requests.get(collection_items_url).text
+    logger.debug(f"API response: {response}")
     return json.loads(response)
 
 
