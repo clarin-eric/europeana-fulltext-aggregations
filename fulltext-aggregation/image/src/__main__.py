@@ -64,17 +64,25 @@ def retrieve_and_store_records(api_key, api_url, collection_id, target_dir, reco
     rows = 50
     cursor = "*"
     ids = []
+    total_count = None
+    last_status = 0
+    status_interval = 100
     while cursor is not None and (records_limit is None or len(ids) < records_limit):
         collection_items_response = retrieve_records(api_url, api_key, collection_id, rows, cursor)
         if "error" in collection_items_response:
             print(f"Error: {collection_items_response['error']}")
             exit(1)
+        if total_count is None:
+            total_count = collection_items_response.get("totalResults")
         cursor = collection_items_response.get("nextCursor")
         items = collection_items_response["items"]
         ids += [item["id"] for item in items]
         logger.debug(f"{len(ids)} ids collected so far (cursor: {cursor})")
         if do_save_metadata:
             save_records_to_file(target_dir, items)
+        if len(ids) - last_status > status_interval:
+            last_status = len(ids)
+            logger.info(f"Record retrieval progress: {last_status}/{total_count} ({last_status / total_count:2.2%})")
 
     if records_limit is not None and len(ids) > records_limit:
         ids = ids[0:records_limit]
