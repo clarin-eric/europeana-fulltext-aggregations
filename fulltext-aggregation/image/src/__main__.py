@@ -6,6 +6,8 @@ import re
 import urllib
 import logging
 
+do_save_metadata = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -13,20 +15,13 @@ def main():
     logging.basicConfig()
     logger.setLevel(logging.INFO)
 
-    search_api_url = os.environ.get('SEARCH_API_URL')
-    search_api_key = os.environ.get('SEARCH_API_KEY')
+    search_api_url = get_mandatory_env_var('SEARCH_API_URL')
+    search_api_key = get_mandatory_env_var('SEARCH_API_KEY')
+    iiif_api_url = get_mandatory_env_var('IIIF_API_URL')
 
     output_base_dir = os.environ.get('OUTPUT_DIR')
     if output_base_dir is None:
         output_base_dir = os.curdir
-
-    if search_api_url is None:
-        print("ERROR: SEARCH_API_URL variable not set. Using default.")
-        exit(1)
-
-    if search_api_key is None:
-        print("Error: SEARCH_API_KEY variable not set")
-        exit(1)
 
     if len(sys.argv) <= 1:
         print("ERROR: Provide a set identifier as the first argument")
@@ -37,6 +32,7 @@ def main():
     os.makedirs(name=target_dir, exist_ok=True)
 
     ids = retrieve_and_store_records(search_api_key, search_api_url, target_dir, collection_id)
+    retrieve_full_text(iiif_api_url, ids)
 
     print(ids)
 
@@ -68,22 +64,34 @@ def retrieve_and_store_records(api_key, api_url, target_dir, collection_id):
         items = collection_items_response["items"]
         ids += [item["id"] for item in items]
         logger.debug(f"{len(ids)} ids collected so far (cursor: {cursor})")
-        save_records_to_file(metadata_dir, items)
+        if do_save_metadata:
+            save_records_to_file(metadata_dir, items)
     logger.info(f"Done. Collected {len(ids)} ids from collection {collection_id}")
     return ids
 
 
-def retrieve_records(api_url, api_key, collection_id, rows, cursor):
+def retrieve_records(api_base_url, api_key, collection_id, rows, cursor):
     params = {
         'wskey': api_key,
         'rows': rows,
         'cursor': cursor,
         'query': f"europeana_collectionName:{collection_id}*",
         'profile': 'standard'}
-    collection_items_url = f"{api_url}?{urllib.parse.urlencode(params)}"
-    logger.debug(f"Making API request: {collection_items_url}")
-    response = requests.get(collection_items_url).text
-    logger.debug(f"API response: {response}")
+    collection_items_url = f"{api_base_url}?{urllib.parse.urlencode(params)}"
+    return get_json_from_http(collection_items_url)
+
+
+def retrieve_full_text(api_base_url, ids):
+    for record_id in ids:
+        iiif_manifest_url = f"{api_base_url}/presentation{record_id}/manifest"
+        logger.debug(f"Getting manifest for {record_id} from {iiif_manifest_url}")
+        manifest = get_json_from_http(iiif_manifest_url)
+
+
+def get_json_from_http(url):
+    logger.debug(f"Making request: {url}")
+    response = requests.get(url).text
+    logger.debug(f"API response: {url}")
     return json.loads(response)
 
 
@@ -98,8 +106,16 @@ def save_records_to_file(target_dir, items):
             text_file.write(json.dumps(item))
 
 
-def id_to_filename(id):
-    return re.sub(r'\/', '_', id)
+def id_to_filename(value):
+    return value.replace('/', '_')
+
+
+def get_mandatory_env_var(name):
+    value = os.environ.get(name)
+    if value is None:
+        print("ERROR: SEARCH_API_URL variable not set. Using default.")
+        exit(1)
+    return value;
 
 
 if __name__ == "__main__":
