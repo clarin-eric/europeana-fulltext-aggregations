@@ -6,3 +6,7 @@ services:
     environment:
       - SEARCH_API_URL
       - SEARCH_API_KEY
+      - IIIF_API_URL
+      - OUTPUT_DIR=/output
+    volumes:
+      - "${OUTPUT_DIR}:/output"
