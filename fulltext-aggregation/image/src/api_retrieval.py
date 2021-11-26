@@ -5,6 +5,8 @@ import json
 import urllib
 import logging
 
+DO_LOG_PROGRESS = True
+PROGRESS_STATUS_INTERVAL = 100
 DO_SAVE_METADATA = True
 DO_SAVE_FULLTEXT = True
 SEARCH_RESULT_PROFILE = 'minimal'
@@ -65,21 +67,20 @@ def retrieve_record_ids(api_key, api_url, collection_id, records_limit):
     ids = []
     total_count = None
     last_status = 0
-    status_interval = 100
     while cursor is not None and (records_limit is None or len(ids) < records_limit):
         collection_items_response = retrieve_search_records(api_url, api_key, collection_id, rows, cursor)
         if "error" in collection_items_response:
             print(f"Error: {collection_items_response['error']}")
             exit(1)
-        if total_count is None:
-            total_count = collection_items_response.get("totalResults")
         cursor = collection_items_response.get("nextCursor")
         items = collection_items_response["items"]
         ids += [item["id"] for item in items]
         logger.debug(f"{len(ids)} ids collected so far (cursor: {cursor})")
-        if len(ids) - last_status > status_interval:
-            last_status = len(ids)
-            logger.info(f"Record retrieval progress: {last_status}/{total_count} ({last_status / total_count:2.2%})")
+        if DO_LOG_PROGRESS:
+            if len(ids) - last_status > PROGRESS_STATUS_INTERVAL:
+                total_count = collection_items_response.get("totalResults")
+                last_status = len(ids)
+                logger.info(f"Identifier retrieval progress: {last_status}/{total_count} ({last_status / total_count:2.2%})")
 
     if records_limit is not None and len(ids) > records_limit:
         ids = ids[0:records_limit]
@@ -104,7 +105,16 @@ def retrieve_search_records(api_base_url, api_key, collection_id, rows, cursor):
 
 def retrieve_and_store_metadata_records(api_key, api_url, target_dir, ids):
     logger.info(f"Starting retrieval of metadata records for {len(ids)} objects from API at {api_url}")
+
+    total_count = len(ids)
+    report_count = 0
     for record_id in ids:
+        if DO_LOG_PROGRESS:
+            report_count += 1
+            if report_count % PROGRESS_STATUS_INTERVAL == 0:
+                logger.info(f"Metadata record retrieval progress: "
+                            f"{report_count}/{total_count} "
+                            f"({report_count / total_count:2.2%})")
         item_content = retrieve_metadata_record(api_url, api_key, record_id)
         file_name = f"{target_dir}/{id_to_filename(record_id)}.json"
         with open(file_name, "w") as text_file:
