@@ -6,7 +6,7 @@ import urllib
 import logging
 
 DO_LOG_PROGRESS = True
-PROGRESS_STATUS_INTERVAL = 100
+PROGRESS_STATUS_INTERVAL = 10
 DO_SAVE_METADATA = True
 DO_SAVE_FULLTEXT = True
 SEARCH_RESULT_PROFILE = 'minimal'
@@ -131,8 +131,18 @@ def retrieve_metadata_record(api_base_url, api_key, record_id):
 
 def retrieve_and_store_full_text(api_base_url, ids, target_dir):
     logger.info(f"Starting retrieval of fulltext for {len(ids)} records from API at {api_base_url}")
+
+    total_count = len(ids)
+    report_count = 0
     for record_id in ids:
-        logger.info(f"Retrieving fulltext content for {record_id}")
+        if DO_LOG_PROGRESS:
+            report_count += 1
+            if report_count % PROGRESS_STATUS_INTERVAL == 0:
+                logger.info(f"Fulltext record retrieval progress: "
+                            f"{report_count}/{total_count} "
+                            f"({report_count / total_count:2.2%})")
+
+        logger.debug(f"Retrieving fulltext content for {record_id}")
         iiif_manifest_url = f"{api_base_url}/presentation{record_id}/manifest"
         logger.debug(f"Getting manifest for {record_id} from {iiif_manifest_url}")
         manifest = get_json_from_http(iiif_manifest_url)
@@ -145,8 +155,7 @@ def retrieve_and_store_full_text(api_base_url, ids, target_dir):
                         annotation_urls += [otherContent]
 
         if len(annotation_urls) > 0:
-            logger.debug(f"Annotation urls: {annotation_urls}")
-            logger.info(f"Found {len(annotation_urls)} annotation URLs. Retrieving content...")
+            logger.debug(f"Found {len(annotation_urls)} annotation URLs. Retrieving content...")
             annotations = retrieve_full_text_annotations(annotation_urls)
             if len(annotations) > 0:
                 save_annotations_to_file(target_dir, {record_id: annotations})
