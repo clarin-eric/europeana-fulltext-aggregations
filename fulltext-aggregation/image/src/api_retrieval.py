@@ -5,7 +5,9 @@ import json
 import urllib
 import logging
 
-do_save_metadata = True
+DO_SAVE_METADATA = True
+DO_SAVE_FULLTEXT = True
+SEARCH_RESULT_PROFILE = 'minimal'
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +17,8 @@ def retrieve(collection_id):
     logger.setLevel(logging.INFO)
 
     search_api_url = get_mandatory_env_var('SEARCH_API_URL')
-    search_api_key = get_mandatory_env_var('SEARCH_API_KEY')
+    record_api_url = get_mandatory_env_var('RECORD_API_URL')
+    api_key = get_mandatory_env_var('SEARCH_API_KEY')
     iiif_api_url = get_mandatory_env_var('IIIF_API_URL')
     records_limit = int(get_optional_env_var('RECORD_RETRIEVAL_LIMIT', "1"))
     if records_limit < 0:
@@ -25,20 +28,22 @@ def retrieve(collection_id):
     if output_base_dir is None:
         output_base_dir = os.curdir
 
-    metadata_dir = f"{output_base_dir}/{collection_id}/metadata"
-    os.makedirs(name=metadata_dir, exist_ok=True)
+    ids = retrieve_record_ids(api_key, search_api_url, collection_id, records_limit)
 
-    ids = retrieve_and_store_records(search_api_key, search_api_url, collection_id, metadata_dir, records_limit)
+    if DO_SAVE_METADATA:
+        metadata_dir = f"{output_base_dir}/{collection_id}/metadata"
+        os.makedirs(name=metadata_dir, exist_ok=True)
+        retrieve_and_store_metadata_records(api_key, record_api_url, metadata_dir, ids)
 
-    fulltext_dir = f"{output_base_dir}/{collection_id}/fulltext"
-    os.makedirs(name=fulltext_dir, exist_ok=True)
-
-    retrieve_and_store_full_text(iiif_api_url, ids, fulltext_dir)
+    if DO_SAVE_FULLTEXT:
+        fulltext_dir = f"{output_base_dir}/{collection_id}/fulltext"
+        os.makedirs(name=fulltext_dir, exist_ok=True)
+        retrieve_and_store_full_text(iiif_api_url, ids, fulltext_dir)
 
     # TODO: create CMDI metadata for full text collection
 
 
-def retrieve_and_store_records(api_key, api_url, collection_id, target_dir, records_limit):
+def retrieve_record_ids(api_key, api_url, collection_id, records_limit):
     """
     Retrieves the records for all objects in the specified collection, stores the JSON representations to disk
     and produces a list of identifiers for all retrieved records
@@ -62,7 +67,7 @@ def retrieve_and_store_records(api_key, api_url, collection_id, target_dir, reco
     last_status = 0
     status_interval = 100
     while cursor is not None and (records_limit is None or len(ids) < records_limit):
-        collection_items_response = retrieve_records(api_url, api_key, collection_id, rows, cursor)
+        collection_items_response = retrieve_search_records(api_url, api_key, collection_id, rows, cursor)
         if "error" in collection_items_response:
             print(f"Error: {collection_items_response['error']}")
             exit(1)
@@ -72,8 +77,6 @@ def retrieve_and_store_records(api_key, api_url, collection_id, target_dir, reco
         items = collection_items_response["items"]
         ids += [item["id"] for item in items]
         logger.debug(f"{len(ids)} ids collected so far (cursor: {cursor})")
-        if do_save_metadata:
-            save_records_to_file(target_dir, items)
         if len(ids) - last_status > status_interval:
             last_status = len(ids)
             logger.info(f"Record retrieval progress: {last_status}/{total_count} ({last_status / total_count:2.2%})")
@@ -85,15 +88,35 @@ def retrieve_and_store_records(api_key, api_url, collection_id, target_dir, reco
     return ids
 
 
-def retrieve_records(api_base_url, api_key, collection_id, rows, cursor):
+def retrieve_search_records(api_base_url, api_key, collection_id, rows, cursor):
     params = {
         'wskey': api_key,
         'rows': rows,
         'cursor': cursor,
         'query': f"europeana_collectionName:{collection_id}*",
-        'profile': 'standard'}
+        'profile': SEARCH_RESULT_PROFILE,
+        'reusability': open,
+        'media': 'true'
+    }
     collection_items_url = f"{api_base_url}?{urllib.parse.urlencode(params)}"
     return get_json_from_http(collection_items_url)
+
+
+def retrieve_and_store_metadata_records(api_key, api_url, target_dir, ids):
+    logger.info(f"Starting retrieval of metadata records for {len(ids)} objects from API at {api_url}")
+    for record_id in ids:
+        item_content = retrieve_metadata_record(api_url, api_key, record_id)
+        file_name = f"{target_dir}/{id_to_filename(record_id)}.json"
+        with open(file_name, "w") as text_file:
+            text_file.write(item_content)
+
+
+def retrieve_metadata_record(api_base_url, api_key, record_id):
+    params = {
+        'wskey': api_key
+    }
+    url = f"{api_base_url}{record_id}.json?{urllib.parse.urlencode(params)}"
+    return requests.get(url).text
 
 
 def retrieve_and_store_full_text(api_base_url, ids, target_dir):
@@ -173,7 +196,7 @@ def id_to_filename(value):
 def get_mandatory_env_var(name):
     value = os.environ.get(name)
     if value is None:
-        print("ERROR: SEARCH_API_URL variable not set. Using default.")
+        print(f"ERROR: mandatory {name} variable not set")
         exit(1)
     return value;
 
