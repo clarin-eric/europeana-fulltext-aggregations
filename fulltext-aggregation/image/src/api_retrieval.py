@@ -10,6 +10,7 @@ PROGRESS_STATUS_INTERVAL = 10
 DO_SAVE_METADATA = True
 DO_SAVE_FULLTEXT = True
 SEARCH_RESULT_PROFILE = 'minimal'
+SEARCH_API_REQUEST_ROWS = 50
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ def retrieve(collection_id):
     logging.basicConfig()
     logger.setLevel(logging.INFO)
 
+    # Apply configuration
     search_api_url = get_mandatory_env_var('SEARCH_API_URL')
     record_api_url = get_mandatory_env_var('RECORD_API_URL')
     api_key = get_mandatory_env_var('SEARCH_API_KEY')
@@ -30,19 +32,20 @@ def retrieve(collection_id):
     if output_base_dir is None:
         output_base_dir = os.curdir
 
+    # Retrieve identifiers for records in collection
     ids = retrieve_record_ids(api_key, search_api_url, collection_id, records_limit)
 
     if DO_SAVE_METADATA:
+        # Retrieve full metadata records for collected identifiers
         metadata_dir = f"{output_base_dir}/{collection_id}/metadata"
         os.makedirs(name=metadata_dir, exist_ok=True)
         retrieve_and_store_metadata_records(api_key, record_api_url, metadata_dir, ids)
 
     if DO_SAVE_FULLTEXT:
+        # Retrieve all full-text content for collected identifiers
         fulltext_dir = f"{output_base_dir}/{collection_id}/fulltext"
         os.makedirs(name=fulltext_dir, exist_ok=True)
         retrieve_and_store_full_text(iiif_api_url, ids, fulltext_dir)
-
-    # TODO: create CMDI metadata for full text collection
 
 
 def retrieve_record_ids(api_key, api_url, collection_id, records_limit):
@@ -62,26 +65,35 @@ def retrieve_record_ids(api_key, api_url, collection_id, records_limit):
     else:
         logger.info(f"Record retrieval limit has been set to {records_limit}, will not attempt to retrieve more.")
 
-    rows = 50
     cursor = "*"
     ids = []
     total_count = None
     last_status = 0
+
+    # Paginate (using cursor) over search results
     while cursor is not None and (records_limit is None or len(ids) < records_limit):
-        collection_items_response = retrieve_search_records(api_url, api_key, collection_id, rows, cursor)
+        collection_items_response = retrieve_search_records(
+            api_url, api_key, collection_id, SEARCH_API_REQUEST_ROWS, cursor)
         if "error" in collection_items_response:
             print(f"Error: {collection_items_response['error']}")
             exit(1)
         cursor = collection_items_response.get("nextCursor")
         items = collection_items_response["items"]
+
+        # Extract identifiers and add to list
         ids += [item["id"] for item in items]
         logger.debug(f"{len(ids)} ids collected so far (cursor: {cursor})")
+
+        # Progress logging
         if DO_LOG_PROGRESS:
             if len(ids) - last_status > PROGRESS_STATUS_INTERVAL:
                 total_count = collection_items_response.get("totalResults")
                 last_status = len(ids)
-                logger.info(f"Identifier retrieval progress: {last_status}/{total_count} ({last_status / total_count:2.2%})")
+                logger.info(f"Identifier retrieval progress: "
+                            f"{last_status}/{total_count} "
+                            f"({last_status / min(total_count, records_limit):2.2%} - {last_status / total_count:2.2%} of total)")
 
+    # Cut off any extra identifiers (due to pagination we may have exceeded the configured limit)
     if records_limit is not None and len(ids) > records_limit:
         ids = ids[0:records_limit]
 
@@ -108,17 +120,22 @@ def retrieve_and_store_metadata_records(api_key, api_url, target_dir, ids):
 
     total_count = len(ids)
     report_count = 0
+
+    # get and save records for all ids
     for record_id in ids:
+        item_content = retrieve_metadata_record(api_url, api_key, record_id)
+        file_name = f"{target_dir}/{id_to_filename(record_id)}.json"
+        # save metadata record for each object
+        with open(file_name, "w") as text_file:
+            text_file.write(item_content)
+
+        # Progress logging
         if DO_LOG_PROGRESS:
             report_count += 1
             if report_count % PROGRESS_STATUS_INTERVAL == 0:
                 logger.info(f"Metadata record retrieval progress: "
                             f"{report_count}/{total_count} "
                             f"({report_count / total_count:2.2%})")
-        item_content = retrieve_metadata_record(api_url, api_key, record_id)
-        file_name = f"{target_dir}/{id_to_filename(record_id)}.json"
-        with open(file_name, "w") as text_file:
-            text_file.write(item_content)
 
 
 def retrieve_metadata_record(api_base_url, api_key, record_id):
@@ -135,18 +152,12 @@ def retrieve_and_store_full_text(api_base_url, ids, target_dir):
     total_count = len(ids)
     report_count = 0
     for record_id in ids:
-        if DO_LOG_PROGRESS:
-            report_count += 1
-            if report_count % PROGRESS_STATUS_INTERVAL == 0:
-                logger.info(f"Fulltext record retrieval progress: "
-                            f"{report_count}/{total_count} "
-                            f"({report_count / total_count:2.2%})")
-
         logger.debug(f"Retrieving fulltext content for {record_id}")
         iiif_manifest_url = f"{api_base_url}/presentation{record_id}/manifest"
         logger.debug(f"Getting manifest for {record_id} from {iiif_manifest_url}")
         manifest = get_json_from_http(iiif_manifest_url)
 
+        # collection annotation URLs for record
         annotation_urls = []
         for sequence in manifest.get("sequences", []):
             for canvas in sequence.get("canvases", []):
@@ -154,6 +165,7 @@ def retrieve_and_store_full_text(api_base_url, ids, target_dir):
                     if isinstance(otherContent, str) and otherContent.startswith(api_base_url):
                         annotation_urls += [otherContent]
 
+        # save annotations
         if len(annotation_urls) > 0:
             logger.debug(f"Found {len(annotation_urls)} annotation URLs. Retrieving content...")
             annotations = retrieve_full_text_annotations(annotation_urls)
@@ -161,6 +173,14 @@ def retrieve_and_store_full_text(api_base_url, ids, target_dir):
                 save_annotations_to_file(target_dir, {record_id: annotations})
         else:
             logger.warning(f"No full-text annotation URLs found in manifest for {record_id}")
+
+        # progress logging
+        if DO_LOG_PROGRESS:
+            report_count += 1
+            if report_count % PROGRESS_STATUS_INTERVAL == 0:
+                logger.info(f"Fulltext record retrieval progress: "
+                            f"{report_count}/{total_count} "
+                            f"({report_count / total_count:2.2%})")
 
 
 def retrieve_full_text_annotations(annotation_urls):
