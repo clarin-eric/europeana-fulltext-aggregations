@@ -1,4 +1,5 @@
 import api_retrieval
+import logging
 import sys
 
 MODE_RETRIEVE = "retrieve"
@@ -6,8 +7,14 @@ MODE_GENERATE_CMDI = "generate-cmdi"
 
 modes = [MODE_RETRIEVE, MODE_GENERATE_CMDI]
 
+logger = logging.getLogger(__name__)
+
 
 def main():
+    logging.basicConfig()
+    logger.setLevel(logging.INFO)
+
+    logger.debug(f"sys.argv={sys.argv}")
     if len(sys.argv) <= 1:
         print_usage()
         exit(0)
@@ -17,17 +24,20 @@ def main():
         print_usage()
         exit(1)
 
-    run_command(sys.argv[1])
+    run_command(sys.argv[1], sys.argv[2:])
 
 
-def run_command(command):
+def run_command(command, arguments):
+    logger.info(f"Command: {command}")
+    logger.info(f"Arguments: {arguments}")
+
     if command == MODE_RETRIEVE: # retrieve
-        if len(sys.argv) <= 2:
+        if len(arguments) < 1:
             print("ERROR: Provide a set identifier as the first argument")
             print_usage()
             exit(1)
 
-        collection_id = sys.argv[2]
+        collection_id = arguments[0]
         api_retrieval.retrieve(collection_id)
     if command == MODE_GENERATE_CMDI:  # generate CMDI
         print("Mode not implemented")
