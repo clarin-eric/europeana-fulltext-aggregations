@@ -1,5 +1,4 @@
 import os
-import sys
 import requests
 import json
 import urllib
@@ -55,7 +54,6 @@ def retrieve_record_ids(api_key, api_url, collection_id, records_limit):
     :param api_key:
     :param api_url:
     :param collection_id:
-    :param target_dir:
     :param records_limit:
     :return: list of identifiers
     """
@@ -67,7 +65,6 @@ def retrieve_record_ids(api_key, api_url, collection_id, records_limit):
 
     cursor = "*"
     ids = []
-    total_count = None
     last_status = 0
 
     # Paginate (using cursor) over search results
@@ -89,9 +86,14 @@ def retrieve_record_ids(api_key, api_url, collection_id, records_limit):
             if len(ids) - last_status > PROGRESS_STATUS_INTERVAL:
                 total_count = collection_items_response.get("totalResults")
                 last_status = len(ids)
-                logger.info(f"Identifier retrieval progress: "
-                            f"{last_status}/{total_count} "
-                            f"({last_status / min(total_count, records_limit):2.2%} - {last_status / total_count:2.2%} of total)")
+                if records_limit is None:
+                    logger.info(f"Identifier retrieval progress: {last_status}/{total_count} "
+                                f"- {last_status / total_count:2.2%})")
+                else:
+                    logger.info(f"Identifier retrieval progress: "
+                                f"{last_status}/{total_count} "
+                                f"({last_status / min(total_count, records_limit):2.2%} "
+                                f"- {last_status / total_count:2.2%} of total)")
 
     # Cut off any extra identifiers (due to pagination we may have exceeded the configured limit)
     if records_limit is not None and len(ids) > records_limit:
@@ -237,7 +239,7 @@ def get_mandatory_env_var(name):
     if value is None:
         print(f"ERROR: mandatory {name} variable not set")
         exit(1)
-    return value;
+    return value
 
 
 def get_optional_env_var(name, default=None):
