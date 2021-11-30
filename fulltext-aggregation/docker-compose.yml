@@ -5,8 +5,9 @@ services:
     build: ./image
     environment:
       - SEARCH_API_URL
-      - SEARCH_API_KEY
+      - RECORD_API_URL
       - IIIF_API_URL
+      - SEARCH_API_KEY
       - RECORD_RETRIEVAL_LIMIT
       - OUTPUT_DIR=/output
     volumes:
