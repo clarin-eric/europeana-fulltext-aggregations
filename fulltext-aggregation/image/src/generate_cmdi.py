@@ -10,7 +10,7 @@ from glom import glom, SKIP
 logger = logging.getLogger(__name__)
 
 
-def generate(metadata_dir, fulltext_dir):
+def generate(metadata_dir, fulltext_dir, output_filename='output.json'):
     logging.basicConfig()
     logger.setLevel(logging.DEBUG)
 
@@ -41,7 +41,7 @@ def generate(metadata_dir, fulltext_dir):
                                 index[title][year] = []
                             index[title][year] += [identifier]
 
-    with open('output.json', 'w') as output_file:
+    with open(output_filename, 'w') as output_file:
         json.dump(index, output_file, indent=True)
 
     # TODO: generate CMDI for property combinations

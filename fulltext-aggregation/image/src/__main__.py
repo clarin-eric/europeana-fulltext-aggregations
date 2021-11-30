@@ -62,7 +62,8 @@ def process_all(ids, output_dir):
     for collection_id in ids:
         api_retrieval.retrieve(collection_id, output_dir)
         generate_cmdi.generate(common.get_metadata_dir(output_dir, collection_id),
-                               common.get_fulltext_dir(output_dir, collection_id))
+                               common.get_fulltext_dir(output_dir, collection_id),
+                               f"{output_dir}/map-{collection_id}.json")
 
 
 def print_usage():
