@@ -1,7 +1,7 @@
 import logging
 import os
 import json
-import pprint
+import unidecode
 import re
 
 import glom as gl
@@ -27,20 +27,24 @@ def generate(metadata_dir, fulltext_dir, properties):
                     logger.error(f"Metadata object could not be read from {file_path}")
                 else:
                     identifier = metadata['about']
-                    publishers = get_value_from_proxies(metadata, 'dcPublisher')
+                    titles = get_value_from_proxies(metadata, 'dcTitle')
+                    normalized_titles = [normalize_title(title) for title in titles]
                     issued_dates = get_value_from_proxies(metadata, 'dctermsIssued')
                     issued_years = [date_to_year(date) for date in issued_dates]
-                    logger.debug(f"Identifier: {identifier}; Publisher: {publishers}; Issued: {issued_dates}")
+                    logger.debug(f"Identifier: {identifier}; Title: {titles}; Issued: {issued_dates}")
 
-                    for publisher in publishers:
-                        if publisher not in index:
-                            index[publisher] = {}
+                    for title in normalized_titles:
+                        if title not in index:
+                            index[title] = {}
                         for year in issued_years:
-                            if year not in index[publisher]:
-                                index[publisher][year] = []
-                            index[publisher][year] += [identifier]
-    pprint.pprint(index)
-    # TODO: generate metadata for property combinations
+                            if year not in index[title]:
+                                index[title][year] = []
+                            index[title][year] += [identifier]
+
+    with open('output.json', 'w') as output_file:
+        json.dump(index, output_file, indent=True)
+
+    # TODO: generate CMDI for property combinations
 
 
 def get_value_from_proxies(metadata, prop):
@@ -52,13 +56,21 @@ def get_value_from_proxies(metadata, prop):
         )
         return gl.flatten(glom(metadata, glom_spec, default=None))
     except gl.core.PathAccessError:
-        logger.warning("Publisher not found")
+        logger.warning("Property not found")
 
 
 def date_to_year(date):
-    logger.debug(f"Date: {date}")
     match = re.search(r"(\d{4})-\d{2}-\d{2}", date)
     if match:
         return match.group(1)
     else:
         return None
+
+
+def normalize_title(title):
+    match = re.search(r"^[a-zA-Z ]+", unidecode.unidecode(title))
+    if match:
+        return title[match.start(0):match.end(0)]
+    else:
+        return None
+
