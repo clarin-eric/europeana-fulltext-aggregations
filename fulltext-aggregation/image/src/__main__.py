@@ -1,4 +1,5 @@
 import api_retrieval
+import generate_cmdi
 import logging
 import sys
 
@@ -40,7 +41,11 @@ def run_command(command, arguments):
         collection_id = arguments[0]
         api_retrieval.retrieve(collection_id)
     if command == MODE_GENERATE_CMDI:  # generate CMDI
-        print("Mode not implemented")
+        if len(arguments) < 2:
+            print("ERROR: Provide locations for metadata and fulltext")
+            print_usage()
+            exit(1)
+        generate_cmdi.generate(arguments[0], arguments[1], [])
 
 
 def print_usage():
@@ -49,8 +54,8 @@ def print_usage():
         {sys.executable} {__file__} <command> <args>
 
     Commands:
-        {MODE_RETRIEVE} <collectionId>
-        {MODE_GENERATE_CMDI} <path>  
+        {MODE_RETRIEVE} <collection id>
+        {MODE_GENERATE_CMDI} <metadata path>  <fulltext path>
     """)
 
 
