@@ -1,3 +1,4 @@
+import common
 import os
 import requests
 import json
@@ -14,20 +15,19 @@ SEARCH_API_REQUEST_ROWS = 50
 logger = logging.getLogger(__name__)
 
 
-def retrieve(collection_id):
+def retrieve(collection_id, output_base_dir):
     logging.basicConfig()
     logger.setLevel(logging.INFO)
 
     # Apply configuration
-    search_api_url = get_mandatory_env_var('SEARCH_API_URL')
-    record_api_url = get_mandatory_env_var('RECORD_API_URL')
-    api_key = get_mandatory_env_var('SEARCH_API_KEY')
-    iiif_api_url = get_mandatory_env_var('IIIF_API_URL')
-    records_limit = int(get_optional_env_var('RECORD_RETRIEVAL_LIMIT', "1"))
+    search_api_url = common.get_mandatory_env_var('SEARCH_API_URL')
+    record_api_url = common.get_mandatory_env_var('RECORD_API_URL')
+    api_key = common.get_mandatory_env_var('SEARCH_API_KEY')
+    iiif_api_url = common.get_mandatory_env_var('IIIF_API_URL')
+    records_limit = int(common.get_optional_env_var('RECORD_RETRIEVAL_LIMIT', "1"))
     if records_limit < 0:
         records_limit = None
 
-    output_base_dir = os.environ.get('OUTPUT_DIR')
     if output_base_dir is None:
         output_base_dir = os.curdir
 
@@ -36,13 +36,13 @@ def retrieve(collection_id):
 
     if DO_SAVE_METADATA:
         # Retrieve full metadata records for collected identifiers
-        metadata_dir = f"{output_base_dir}/{collection_id}/metadata"
+        metadata_dir = common.get_metadata_dir(output_base_dir, collection_id)
         os.makedirs(name=metadata_dir, exist_ok=True)
         retrieve_and_store_metadata_records(api_key, record_api_url, metadata_dir, ids)
 
     if DO_SAVE_FULLTEXT:
         # Retrieve all full-text content for collected identifiers
-        fulltext_dir = f"{output_base_dir}/{collection_id}/fulltext"
+        fulltext_dir = common.get_fulltext_dir(output_base_dir, collection_id)
         os.makedirs(name=fulltext_dir, exist_ok=True)
         retrieve_and_store_full_text(iiif_api_url, ids, fulltext_dir)
 
@@ -126,7 +126,7 @@ def retrieve_and_store_metadata_records(api_key, api_url, target_dir, ids):
     # get and save records for all ids
     for record_id in ids:
         item_content = retrieve_metadata_record(api_url, api_key, record_id)
-        file_name = f"{target_dir}/{id_to_filename(record_id)}.json"
+        file_name = f"{target_dir}/{common.id_to_filename(record_id)}.json"
         # save metadata record for each object
         with open(file_name, "w") as text_file:
             text_file.write(item_content)
@@ -214,7 +214,7 @@ def save_records_to_file(target_dir, items):
     Saves each item in the array to a file '{id}.json' in the target directory
     """
     for item in items:
-        file_name = f"{target_dir}/{id_to_filename(item['id'])}.json"
+        file_name = f"{target_dir}/{common.id_to_filename(item['id'])}.json"
         logger.debug(f"Storing metadata in {file_name}")
         with open(file_name, "w") as text_file:
             text_file.write(json.dumps(item))
@@ -223,28 +223,10 @@ def save_records_to_file(target_dir, items):
 def save_annotations_to_file(target_dir, annotations_dict):
     for record_id in annotations_dict:
         annotations = annotations_dict[record_id]
-        file_name = f"{target_dir}/{id_to_filename(record_id)}.txt"
+        file_name = f"{target_dir}/{common.id_to_filename(record_id)}.txt"
         logger.debug(f"Storing fulltext content in {file_name}")
         with open(file_name, "w") as text_file:
             for annotation in annotations:
                 text_file.write(annotation)
 
 
-def id_to_filename(value):
-    return value.replace('/', '_')
-
-
-def get_mandatory_env_var(name):
-    value = os.environ.get(name)
-    if value is None:
-        print(f"ERROR: mandatory {name} variable not set")
-        exit(1)
-    return value
-
-
-def get_optional_env_var(name, default=None):
-    value = os.environ.get(name)
-    if value is None:
-        return default
-    else:
-        return value

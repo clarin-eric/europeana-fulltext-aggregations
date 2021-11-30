@@ -10,7 +10,7 @@ from glom import glom, SKIP
 logger = logging.getLogger(__name__)
 
 
-def generate(metadata_dir, fulltext_dir, properties):
+def generate(metadata_dir, fulltext_dir):
     logging.basicConfig()
     logger.setLevel(logging.DEBUG)
 
@@ -45,6 +45,7 @@ def generate(metadata_dir, fulltext_dir, properties):
         json.dump(index, output_file, indent=True)
 
     # TODO: generate CMDI for property combinations
+    # only for records that have full-text!
 
 
 def get_value_from_proxies(metadata, prop):

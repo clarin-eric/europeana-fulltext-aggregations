@@ -1,12 +1,14 @@
+import common
 import api_retrieval
 import generate_cmdi
 import logging
 import sys
 
+MODE_ALL = "all"
 MODE_RETRIEVE = "retrieve"
 MODE_GENERATE_CMDI = "generate-cmdi"
 
-modes = [MODE_RETRIEVE, MODE_GENERATE_CMDI]
+modes = [MODE_ALL, MODE_RETRIEVE, MODE_GENERATE_CMDI]
 
 logger = logging.getLogger(__name__)
 
@@ -32,20 +34,35 @@ def run_command(command, arguments):
     logger.info(f"Command: {command}")
     logger.info(f"Arguments: {arguments}")
 
-    if command == MODE_RETRIEVE: # retrieve
+    output_dir = common.get_optional_env_var('OUTPUT_DIR', common.DEFAULT_OUTPUT_DIRECTORY)
+
+    if command == MODE_RETRIEVE:  # retrieve
         if len(arguments) < 1:
             print("ERROR: Provide a set identifier as the first argument")
             print_usage()
             exit(1)
 
         collection_id = arguments[0]
-        api_retrieval.retrieve(collection_id)
+        api_retrieval.retrieve(collection_id, output_dir)
     if command == MODE_GENERATE_CMDI:  # generate CMDI
         if len(arguments) < 2:
             print("ERROR: Provide locations for metadata and fulltext")
             print_usage()
             exit(1)
-        generate_cmdi.generate(arguments[0], arguments[1], [])
+        generate_cmdi.generate(arguments[0], arguments[1])
+    if command == MODE_ALL:
+        if len(arguments) < 1:
+            print("ERROR: Provide at least one  set identifier as an argument")
+            print_usage()
+            exit(1)
+        process_all(arguments, output_dir)
+
+
+def process_all(ids, output_dir):
+    for collection_id in ids:
+        api_retrieval.retrieve(collection_id, output_dir)
+        generate_cmdi.generate(common.get_metadata_dir(output_dir, collection_id),
+                               common.get_fulltext_dir(output_dir, collection_id))
 
 
 def print_usage():
@@ -56,6 +73,9 @@ def print_usage():
     Commands:
         {MODE_RETRIEVE} <collection id>
         {MODE_GENERATE_CMDI} <metadata path>  <fulltext path>
+
+        {MODE_ALL} <collection id> [<collection id> ...]
+
     """)
 
 
