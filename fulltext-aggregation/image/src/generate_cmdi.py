@@ -69,7 +69,7 @@ def date_to_year(date):
 
 
 def normalize_title(title):
-    match = re.search(r"^[a-zA-Z ]+", unidecode.unidecode(title))
+    match = re.search(r"^[A-z0-9\s]*[A-z0-9]", unidecode.unidecode(title))
     if match:
         return title[match.start(0):match.end(0)]
     else:
