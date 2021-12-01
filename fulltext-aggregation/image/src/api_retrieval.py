@@ -206,7 +206,11 @@ def get_json_from_http(url):
     logger.debug(f"Making request: {url}")
     response = requests.get(url).text
     logger.debug(f"API response: {url}")
-    return json.loads(response)
+    try:
+        return json.loads(response)
+    except json.JSONDecodeError:
+        logger.error(f"Error decoding response from {url}")
+        return None
 
 
 def save_records_to_file(target_dir, items):
