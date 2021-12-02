@@ -39,11 +39,11 @@ def run_command(command, arguments):
     output_dir = common.get_optional_env_var('OUTPUT_DIR', common.DEFAULT_OUTPUT_DIRECTORY)
 
     if command == MODE_AGGREGATE_XML:
-        if len(arguments) < 2:
+        if len(arguments) < 3:
             print("ERROR: Provide locations for metadata and fulltext")
             print_usage()
             exit(1)
-        aggregate_from_xml.generate(arguments[0], arguments[1])
+        aggregate_from_xml.generate(arguments[0], arguments[1], arguments[2])
     if command == MODE_RETRIEVE:  # retrieve
         if len(arguments) < 1:
             print("ERROR: Provide a set identifier as the first argument")
@@ -79,7 +79,7 @@ def print_usage():
         {sys.executable} {__file__} <command> <args>
 
     Commands:
-        {MODE_AGGREGATE_XML} <metadata path>  <fulltext path>
+        {MODE_AGGREGATE_XML} <metadata path> <fulltext path> <output directory>
 
         {MODE_RETRIEVE} <collection id>
         {MODE_GENERATE_CMDI} <metadata path>  <fulltext path>
