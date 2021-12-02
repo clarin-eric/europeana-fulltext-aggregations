@@ -1,14 +1,16 @@
 import common
 import api_retrieval
 import generate_cmdi
+import aggregate_from_xml
 import logging
 import sys
 
 MODE_ALL = "all"
 MODE_RETRIEVE = "retrieve"
 MODE_GENERATE_CMDI = "generate-cmdi"
+MODE_AGGREGATE_XML = "aggregate-from-xml"
 
-modes = [MODE_ALL, MODE_RETRIEVE, MODE_GENERATE_CMDI]
+modes = [MODE_ALL, MODE_RETRIEVE, MODE_GENERATE_CMDI, MODE_AGGREGATE_XML]
 
 logger = logging.getLogger(__name__)
 
@@ -36,12 +38,17 @@ def run_command(command, arguments):
 
     output_dir = common.get_optional_env_var('OUTPUT_DIR', common.DEFAULT_OUTPUT_DIRECTORY)
 
+    if command == MODE_AGGREGATE_XML:
+        if len(arguments) < 2:
+            print("ERROR: Provide locations for metadata and fulltext")
+            print_usage()
+            exit(1)
+        aggregate_from_xml.generate(arguments[0], arguments[1])
     if command == MODE_RETRIEVE:  # retrieve
         if len(arguments) < 1:
             print("ERROR: Provide a set identifier as the first argument")
             print_usage()
             exit(1)
-
         collection_id = arguments[0]
         api_retrieval.retrieve(collection_id, output_dir)
     if command == MODE_GENERATE_CMDI:  # generate CMDI
@@ -72,6 +79,8 @@ def print_usage():
         {sys.executable} {__file__} <command> <args>
 
     Commands:
+        {MODE_AGGREGATE_XML} <metadata path>  <fulltext path>
+
         {MODE_RETRIEVE} <collection id>
         {MODE_GENERATE_CMDI} <metadata path>  <fulltext path>
 
