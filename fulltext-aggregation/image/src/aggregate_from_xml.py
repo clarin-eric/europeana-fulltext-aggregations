@@ -6,12 +6,21 @@ import unidecode
 import re
 from lxml import etree
 
+CMDP_NS='http://www.clarin.eu/cmd/1/profiles/clarin.eu:cr1:p_1633000337997'
+
 EDM_NAMESPACES = {
     'rdf':      'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
     'edm':      'http://www.europeana.eu/schemas/edm/',
     'dc':       'http://purl.org/dc/elements/1.1/',
-    'dcterms':  'http://purl.org/dc/terms/'
+    'dcterms':  'http://purl.org/dc/terms/',
 }
+
+CMD_NAMESPACES = {
+    'cmd': 'http://www.clarin.eu/cmd/1',
+    'cmdp': CMDP_NS
+}
+
+ALL_NAMESPACES = {**EDM_NAMESPACES, **CMD_NAMESPACES}
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +33,7 @@ def generate(metadata_dir, fulltext_dir, output_dir):
     logger.info("Making index for metadata")
     index = make_md_index(metadata_dir)
     # save index to file in output directory
-    logger.info(f"Writing index to file {index_filename}")
+    logger.info(f"Writing index to file")
     save_index(index, f"{output_dir}/index.json")
     # generate CMDI for the indexed property combinations
     logger.info(f"Creating CMDI record for items in index in {output_dir}")
@@ -82,7 +91,7 @@ def generate_cmdi_records(index, fulltext_dir, output_dir):
         years = index[title]
         for year in years:
             ids = years[year]
-            file_name = f"{output_dir}/{unidecode.unidecode(title)}_{year}.cmdi"
+            file_name = f"{output_dir}/{filename_safe(title+'_'+year)}.cmdi"
             logger.debug(f"Generating metadata file {file_name}")
             cmdi_file = make_cmdi_record(template, title, year, ids)
             cmdi_file.write(file_name)
@@ -90,12 +99,38 @@ def generate_cmdi_records(index, fulltext_dir, output_dir):
 
 def make_cmdi_record(template, title, year, ids):
     cmdi_file = copy.deepcopy(template)
-    #TODO: populate CMDI record
+
+    # TODO: resource proxies
+
+    components_root = xpath(cmdi_file, '/cmd:CMD/cmd:Components/cmdp:TextResource')
+    if len(components_root != 1):
+        logger.error("Expecting exactly one components root element")
+    else:
+        make_component_content(components_root, title, year)
+
     return cmdi_file
 
+
+def make_component_content(components_root, title, year):
+    # Insert title info
+    title_info_node = etree.Element('{' + CMDP_NS + '}TitleInfo', nsmap=CMD_NAMESPACES)
+    title_node = etree.Element('{' + CMDP_NS + '}title', nsmap=CMD_NAMESPACES)
+    title_node.text = f"{title} - {year}"
+    title_info_node.insert(1, title_node)
+    components_root[0].insert(1, title_info_node)
+
+    # TODO: description
+    # TODO: language
+    # TODO: subresources
+
+
 # --------- Helpers ---------
-def xpath_text_values(tree, path):
-    nodes = tree.xpath(path, namespaces=EDM_NAMESPACES)
+def xpath(tree, path, namespaces=ALL_NAMESPACES):
+    return tree.xpath(path, namespaces=namespaces)
+
+
+def xpath_text_values(tree, path, namespaces=ALL_NAMESPACES):
+    nodes = xpath(tree, path, namespaces)
     if nodes is None:
         return []
     else:
@@ -117,3 +152,6 @@ def normalize_title(title):
     else:
         return None
 
+
+def filename_safe(name):
+    return re.sub(r"[^A-z0-9]", '_', name)

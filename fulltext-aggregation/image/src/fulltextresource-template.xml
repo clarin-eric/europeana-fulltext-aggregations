@@ -31,9 +31,6 @@
     <cmd:IsPartOfList/>
     <cmd:Components>
         <TextResource>
-            <TitleInfo>
-                <title>title0</title>
-            </TitleInfo>
             <Description>
                 <description>description0</description>
             </Description>
