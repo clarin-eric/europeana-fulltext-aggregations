@@ -202,11 +202,21 @@ def insert_component_content(components_root, title, year, edm_records):
     components_root.insert(1, title_info_node)
 
     # TODO: description
-    # TODO: language
 
-    # get language information from all records
+    # Insert language information
+    languages = get_all_xpath_values(edm_records, '/rdf:RDF/edm:ProvidedCHO/dc:language/text()')
+    # TODO: insert language elements (convert code???)
 
     # TODO: subresources
+
+
+def get_all_xpath_values(docs, path):
+    values = []
+    for doc in docs:
+        for val in xpath(doc, path):
+            if val not in values:
+                values += [val]
+    return values
 
 
 def filter_fulltext_ids(ids, fulltext_dir):
