@@ -31,15 +31,15 @@ def generate(metadata_dir, fulltext_dir, output_dir):
     logging.basicConfig()
     logger.setLevel(logging.DEBUG)
 
-    # collect identifiers for fulltext records
-    logger.info("Collecting fulltext identifiers")
-    fulltext_id_file_map = collect_fulltext_ids(fulltext_dir)
     # 'index' metadata records based on properties
     logger.info("Making index for metadata")
     index = make_md_index(metadata_dir)
     # save index to file in output directory
     logger.info(f"Writing index to file")
     save_index(index, f"{output_dir}/index.json")
+    # collect identifiers for fulltext records
+    logger.info("Collecting fulltext identifiers")
+    fulltext_id_file_map = collect_fulltext_ids(fulltext_dir)
     # generate CMDI for the indexed property combinations
     logger.info(f"Creating CMDI record for items in index in {output_dir}")
     generate_cmdi_records(index, fulltext_id_file_map, fulltext_dir, output_dir)
@@ -67,20 +67,20 @@ def make_md_index(metadata_dir):
                     years = [date_to_year(date)
                              for date in xpath_text_values(doc, '/rdf:RDF/edm:ProvidedCHO/dcterms:issued')]
 
-                    add_to_index(identifier, titles, years, md_index)
+                    add_to_index(identifier, titles, years, md_index, filename)
             except etree.Error as err:
                 logger.error(f"Error processing XML document: {err=}")
     return md_index
 
 
-def add_to_index(identifier, titles, years, index):
+def add_to_index(identifier, titles, years, index, filename):
     for title in titles:
         if title not in index:
             index[title] = {}
         for year in years:
             if year not in index[title]:
-                index[title][year] = []
-            index[title][year] += [identifier]
+                index[title][year] = {}
+            index[title][year][identifier] = filename
 
 
 def save_index(index, index_filename):
@@ -88,19 +88,18 @@ def save_index(index, index_filename):
         json.dump(index, output_file, indent=True)
 
 
-def generate_cmdi_records(index, fulltext_dict, fulltext_dir, output_dir):
+def generate_cmdi_records(index, fulltext_dict, metadata_dir, fulltext_dir, output_dir):
     os.makedirs(output_dir, exist_ok=True)
     script_path = os.path.dirname(os.path.realpath(__file__))
     template = etree.parse(f"{script_path}/fulltextresource-template.xml")
     for title in index:
         years = index[title]
         for year in years:
-            # for each year there is a list of identifiers
+            # for each year there is a dict of identifier -> file
             title_year_ids = years[year]
             # filter on availability of fulltext
-            ids = [identifier
-                   for identifier in title_year_ids
-                   if identifier in fulltext_dict]
+            ids = dict(filter(lambda i: i[0] in fulltext_dict, title_year_ids.items()))
+
             if len(ids) == 0:
                 logger.warning(f"No full text records available for '{title}'/{year} - skipping CMDI creation")
             else:
@@ -108,7 +107,7 @@ def generate_cmdi_records(index, fulltext_dict, fulltext_dir, output_dir):
                              f"{len(title_year_ids)} identifiers for '{title}'/{year} ")
                 file_name = f"{output_dir}/{filename_safe(title + '_' + year)}.cmdi"
                 logger.debug(f"Generating metadata file {file_name}")
-                cmdi_file = make_cmdi_record(template, title, year, ids, fulltext_dict)
+                cmdi_file = make_cmdi_record(template, title, year, ids, fulltext_dict, metadata_dir)
                 cmdi_file.write(file_name, pretty_print=True)
 
 
@@ -147,7 +146,7 @@ def extract_fulltext_record_id(file_path):
     return None
 
 
-def make_cmdi_record(template, title, year, ids, fulltext_dict):
+def make_cmdi_record(template, title, year, ids, fulltext_dict, metadata_dir):
     cmdi_file = copy.deepcopy(template)
 
     # TODO: resource proxies
@@ -161,9 +160,23 @@ def make_cmdi_record(template, title, year, ids, fulltext_dict):
     if len(components_root) != 1:
         logger.error("Expecting exactly one components root element")
     else:
-        insert_component_content(components_root[0], title, year)
+        # load EDM metadata records
+        edm_records = load_emd_records(ids, metadata_dir)
+        insert_component_content(components_root[0], title, year, edm_records)
 
     return cmdi_file
+
+
+def load_emd_records(ids, metadata_dir):
+    edm_records = []
+    for identifier in ids:
+        file_path = f"{metadata_dir}/{ids[identifier]}"
+        logger.debug(f"Loading metadata file {file_path}")
+        try:
+            edm_records += [etree.parse(file_path)]
+        except etree.Error as err:
+            logger.error(f"Error processing XML document: {err=}")
+    return edm_records
 
 
 def insert_resource_proxies(resource_proxies_list, ids, fulltext_dict):
@@ -180,7 +193,7 @@ def insert_resource_proxies(resource_proxies_list, ids, fulltext_dict):
         resource_proxies_list.insert(index, proxy_node)
 
 
-def insert_component_content(components_root, title, year):
+def insert_component_content(components_root, title, year, edm_records):
     # Insert title info
     title_info_node = etree.Element('{' + CMDP_NS + '}TitleInfo', nsmap=CMD_NAMESPACES)
     title_node = etree.Element('{' + CMDP_NS + '}title', nsmap=CMD_NAMESPACES)
@@ -190,6 +203,9 @@ def insert_component_content(components_root, title, year):
 
     # TODO: description
     # TODO: language
+
+    # get language information from all records
+
     # TODO: subresources
 
 
@@ -253,68 +269,83 @@ def filename_safe(name):
 def test_run():
     index = {
         "La clef du cabinet des princes de l'Europe": {
-            "1716": [
-                "3000118435146",
-                "3000118435156",
-                "3000118435157",
-                "3000118435147",
-                "3000118435155",
-                "3000118435154",
-                "3000118435158",
-                "3000118435148",
-                "3000118435150",
-                "3000118435149",
-                "3000118435152",
-                "3000118435153"
-            ],
-            "1755": [
-                "3000118435713",
-                "3000118435724",
-                "3000118435719",
-                "3000118435718",
-                "3000118435722",
-                "3000118435714",
-                "3000118435715",
-                "3000118435723",
-                "3000118435717",
-                "3000118435721",
-                "3000118435720",
-                "3000118435716"
-            ]
-        },
-        "Journal historique et litt\u00e9raire": {
-            "1790": [
-                "3000118436032",
-                "3000118436022",
-                "3000118436014",
-                "3000118436015",
-                "3000118436023",
-                "3000118436033",
-                "3000118436028",
-                "3000118436017",
-                "3000118436031",
-                "3000118436021",
-                "3000118436020",
-                "3000118436030",
-                "3000118436029",
-                "3000118436016",
-                "3000118436013",
-                "3000118436035",
-                "3000118436025",
-                "3000118436024",
-                "3000118436034",
-                "3000118436019",
-                "3000118436036",
-                "3000118436026",
-                "3000118436018",
-                "3000118436027"
-            ]}
+            "1716": {
+                "3000118435146": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118435146.edm.xml",
+                "3000118435156": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118435156.edm.xml",
+                "3000118435157": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118435157.edm.xml",
+                "3000118435147": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118435147.edm.xml",
+                "3000118435155": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118435155.edm.xml",
+                "3000118435154": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118435154.edm.xml",
+                "3000118435158": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118435158.edm.xml",
+                "3000118435148": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118435148.edm.xml",
+                "3000118435150": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118435150.edm.xml",
+                "3000118435149": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118435149.edm.xml",
+                "3000118435152": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118435152.edm.xml",
+                "3000118435153": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118435153.edm.xml"
+            }
+        }, "Journal historique et litt\u00e9raire": {
+            "1790": {
+                "3000118436032": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436032.edm.xml",
+                "3000118436022": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436022.edm.xml",
+                "3000118436014": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436014.edm.xml",
+                "3000118436015": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436015.edm.xml",
+                "3000118436023": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436023.edm.xml",
+                "3000118436033": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436033.edm.xml",
+                "3000118436028": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436028.edm.xml",
+                "3000118436017": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436017.edm.xml",
+                "3000118436031": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436031.edm.xml",
+                "3000118436021": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436021.edm.xml",
+                "3000118436020": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436020.edm.xml",
+                "3000118436030": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436030.edm.xml",
+                "3000118436029": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436029.edm.xml",
+                "3000118436016": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436016.edm.xml",
+                "3000118436013": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436013.edm.xml",
+                "3000118436035": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436035.edm.xml",
+                "3000118436025": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436025.edm.xml",
+                "3000118436024": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436024.edm.xml",
+                "3000118436034": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436034.edm.xml",
+                "3000118436019": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436019.edm.xml",
+                "3000118436036": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436036.edm.xml",
+                "3000118436026": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436026.edm.xml",
+                "3000118436018": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436018.edm.xml",
+                "3000118436027": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436027.edm.xml"
+            },
+            "1779": {
+                "3000118436295": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436295.edm.xml",
+                "3000118436285": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436285.edm.xml",
+                "3000118436300": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436300.edm.xml",
+                "3000118436278": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436278.edm.xml",
+                "3000118436279": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436279.edm.xml",
+                "3000118436284": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436284.edm.xml",
+                "3000118436294": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436294.edm.xml",
+                "3000118436296": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436296.edm.xml",
+                "3000118436286": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436286.edm.xml",
+                "3000118436287": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436287.edm.xml",
+                "3000118436297": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436297.edm.xml",
+                "3000118436292": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436292.edm.xml",
+                "3000118436282": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436282.edm.xml",
+                "3000118436277": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436277.edm.xml",
+                "3000118436283": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436283.edm.xml",
+                "3000118436293": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436293.edm.xml",
+                "3000118436291": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436291.edm.xml",
+                "3000118436281": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436281.edm.xml",
+                "3000118436288": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436288.edm.xml",
+                "3000118436298": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436298.edm.xml",
+                "3000118436299": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436299.edm.xml",
+                "3000118436289": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436289.edm.xml",
+                "3000118436280": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436280.edm.xml",
+                "3000118436290": "http%3A%2F%2Fdata.theeuropeanlibrary.org%2FBibliographicResource%2F3000118436290.edm.xml"
+            }
+        }
     }
     fulltext_ids = {
         '3000118435146': 'BibliographicResource_3000118435146.xml',
-        '3000118436032': 'BibliographicResource_3000118436032.xml'
+        '3000118436295': 'BibliographicResource_3000118436295.xml'
     }
-    generate_cmdi_records(index, fulltext_ids, './output/9200396/fulltext', './test-output')
+    generate_cmdi_records(index, fulltext_ids,
+                      metadata_dir='/Users/twagoo/Documents/Projects/Europeana/fulltext/dumps/edm-md/9200396',
+                      fulltext_dir='/Users/twagoo/Documents/Projects/Europeana/fulltext/dumps/edm-issue/9200396',
+                      output_dir='./test-output')
 
 
 if __name__ == "__main__":
