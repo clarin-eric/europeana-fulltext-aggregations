@@ -32,7 +32,7 @@ def generate(metadata_dir, fulltext_dir, output_dir):
 
     # collect identifiers for fulltext records
     logger.info("Collecting fulltext identifiers")
-    fulltext_ids = collect_fulltext_ids(fulltext_dir)
+    fulltext_id_file_map = collect_fulltext_ids(fulltext_dir)
     # 'index' metadata records based on properties
     logger.info("Making index for metadata")
     index = make_md_index(metadata_dir)
@@ -41,7 +41,7 @@ def generate(metadata_dir, fulltext_dir, output_dir):
     save_index(index, f"{output_dir}/index.json")
     # generate CMDI for the indexed property combinations
     logger.info(f"Creating CMDI record for items in index in {output_dir}")
-    generate_cmdi_records(index, fulltext_ids, fulltext_dir, output_dir)
+    generate_cmdi_records(index, fulltext_id_file_map, fulltext_dir, output_dir)
 
     logger.info("Done")
 
@@ -60,7 +60,7 @@ def make_md_index(metadata_dir):
                 if len(identifiers) == 0:
                     logger.error(f"No identifier in {file_path}")
                 else:
-                    identifier = identifiers[0]
+                    identifier = normalize_identifier(identifiers[0])
                     titles = [normalize_title(title)
                               for title in xpath_text_values(doc, '/rdf:RDF/edm:ProvidedCHO/dc:title')]
                     years = [date_to_year(date)
@@ -112,7 +112,7 @@ def generate_cmdi_records(index, fulltext_ids, fulltext_dir, output_dir):
 
 
 def collect_fulltext_ids(fulltext_dir):
-    ids = []
+    ids = {}
     files = os.listdir(fulltext_dir)
     count = 0
     length = len(files)
@@ -121,17 +121,29 @@ def collect_fulltext_ids(fulltext_dir):
             count += 1
             file_path = f"{fulltext_dir}/{filename}"
             logger.debug(f"Getting identifier from {file_path} ({count}/{length})")
-            try:
-                doc = etree.parse(file_path)
-                root = doc.getroot()
-                xml_base = root.get("{http://www.w3.org/XML/1998/namespace}base")
-                if xml_base is None:
-                    logger.error(f"Expecting identifier in @xml:base of root, but not found in {file_path}")
-                else:
-                    ids += [xml_base]
-            except etree.Error as err:
-                logger.error(f"Error processing XML document: {err=}")
+            identifier = extract_fulltext_record_id(file_path)
+            if identifier is not None:
+                logger.debug(f"Extracted identifier {identifier}")
+                ids[normalize_identifier(identifier)] = filename
+
     return ids
+
+
+def extract_fulltext_record_id(file_path):
+    target_element = '{http://www.w3.org/1999/02/22-rdf-syntax-ns#}RDF'
+    context = etree.iterparse(file_path,
+                              events=('end',), tag=target_element,
+                              huge_tree=True)
+    for event, element in context:
+        if element.tag == target_element:
+            xml_base = element.get("{http://www.w3.org/XML/1998/namespace}base")
+            if xml_base is None:
+                logger.error(f"Expecting identifier in @xml:base of root, but not found in {file_path}")
+                return None
+            else:
+                return xml_base
+        element.clear()
+    return None
 
 
 def make_cmdi_record(template, title, year, ids):
@@ -183,6 +195,18 @@ def xpath_text_values(tree, path, namespaces=ALL_NAMESPACES):
         return [node.text for node in nodes]
 
 
+def normalize_identifier(identifier):
+    # ex. http://data.theeuropeanlibrary.org/BibliographicResource/3000118435146
+    # ex. http://data.europeana.eu/annotation/9200396/BibliographicResource_3000118435009
+    match = re.search(r"http.*[^\d](\d+)$", identifier)
+    if match:
+        logger.debug(f"Normalised identifier: {identifier} -> {match.group(1)}")
+        return match.group(1)
+    else:
+        logger.warning(f"Identifier {identifier} does not match pattern, skipping normalisation!")
+        return identifier
+
+
 def date_to_year(date):
     match = re.search(r"(\d{4})-\d{2}-\d{2}", date)
     if match:
@@ -203,7 +227,10 @@ def filename_safe(name):
     return re.sub(r"[^A-z0-9]", '_', name)
 
 
-if __name__ == "__main__":
+# -- test runs
+
+
+def test_run():
     index = {
         "La clef du cabinet des princes de l'Europe": {
             "1716": [
@@ -243,3 +270,7 @@ if __name__ == "__main__":
         'http://data.theeuropeanlibrary.org/BibliographicResource/3000118435146'
     ]
     generate_cmdi_records(index, fulltext_ids, './output/9200396/fulltext', './test-output')
+
+
+if __name__ == "__main__":
+    test_run()
