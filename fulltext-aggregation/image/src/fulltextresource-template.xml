@@ -15,16 +15,7 @@
         <cmd:MdCollectionDisplayName>MdCollectionDisplayName0</cmd:MdCollectionDisplayName>
     </cmd:Header>
     <cmd:Resources>
-        <cmd:ResourceProxyList>
-            <!--            <cmd:ResourceProxy id="ID001">
-                <cmd:ResourceType mimetype="mimetype1">Metadata</cmd:ResourceType>
-                <cmd:ResourceRef>http://www.oxygenxml.com/</cmd:ResourceRef>
-            </cmd:ResourceProxy>
-            <cmd:ResourceProxy id="ID003">
-                <cmd:ResourceType mimetype="mimetype3">Metadata</cmd:ResourceType>
-                <cmd:ResourceRef>http://www.oxygenxml.com/</cmd:ResourceRef>
-            </cmd:ResourceProxy>-->
-        </cmd:ResourceProxyList>
+        <cmd:ResourceProxyList />
         <cmd:JournalFileProxyList/>
         <cmd:ResourceRelationList/>
     </cmd:Resources>

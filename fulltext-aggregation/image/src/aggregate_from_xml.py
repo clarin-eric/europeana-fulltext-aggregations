@@ -7,6 +7,7 @@ import unidecode
 import re
 from lxml import etree
 
+CMD_NS = 'http://www.clarin.eu/cmd/1'
 CMDP_NS = 'http://www.clarin.eu/cmd/1/profiles/clarin.eu:cr1:p_1633000337997'
 
 EDM_NAMESPACES = {
@@ -17,7 +18,7 @@ EDM_NAMESPACES = {
 }
 
 CMD_NAMESPACES = {
-    'cmd': 'http://www.clarin.eu/cmd/1',
+    'cmd': CMD_NS,
     'cmdp': CMDP_NS
 }
 
@@ -87,7 +88,7 @@ def save_index(index, index_filename):
         json.dump(index, output_file, indent=True)
 
 
-def generate_cmdi_records(index, fulltext_ids, fulltext_dir, output_dir):
+def generate_cmdi_records(index, fulltext_dict, fulltext_dir, output_dir):
     os.makedirs(output_dir, exist_ok=True)
     script_path = os.path.dirname(os.path.realpath(__file__))
     template = etree.parse(f"{script_path}/fulltextresource-template.xml")
@@ -99,16 +100,16 @@ def generate_cmdi_records(index, fulltext_ids, fulltext_dir, output_dir):
             # filter on availability of fulltext
             ids = [identifier
                    for identifier in title_year_ids
-                   if identifier in fulltext_ids]
+                   if identifier in fulltext_dict]
             if len(ids) == 0:
-                logger.warning(f"No full text records available for {title}/{year} - skipping CMDI creation")
+                logger.warning(f"No full text records available for '{title}'/{year} - skipping CMDI creation")
             else:
                 logger.debug(f"Found {len(ids)} fulltext records out of "
                              f"{len(title_year_ids)} identifiers for '{title}'/{year} ")
                 file_name = f"{output_dir}/{filename_safe(title + '_' + year)}.cmdi"
                 logger.debug(f"Generating metadata file {file_name}")
-                cmdi_file = make_cmdi_record(template, title, year, ids)
-                cmdi_file.write(file_name)
+                cmdi_file = make_cmdi_record(template, title, year, ids, fulltext_dict)
+                cmdi_file.write(file_name, pretty_print=True)
 
 
 def collect_fulltext_ids(fulltext_dir):
@@ -146,27 +147,46 @@ def extract_fulltext_record_id(file_path):
     return None
 
 
-def make_cmdi_record(template, title, year, ids):
+def make_cmdi_record(template, title, year, ids, fulltext_dict):
     cmdi_file = copy.deepcopy(template)
 
     # TODO: resource proxies
+    resource_proxies_list = xpath(cmdi_file, '/cmd:CMD/cmd:Resources/cmd:ResourceProxyList')
+    if len(resource_proxies_list) != 1:
+        logger.error("Expecting exactly one components root element")
+    else:
+        insert_resource_proxies(resource_proxies_list[0], ids, fulltext_dict)
 
     components_root = xpath(cmdi_file, '/cmd:CMD/cmd:Components/cmdp:TextResource')
     if len(components_root) != 1:
         logger.error("Expecting exactly one components root element")
     else:
-        make_component_content(components_root, title, year)
+        insert_component_content(components_root[0], title, year)
 
     return cmdi_file
 
 
-def make_component_content(components_root, title, year):
+def insert_resource_proxies(resource_proxies_list, ids, fulltext_dict):
+    index = 0
+    for identifier in ids:
+        proxy_node = etree.Element('{' + CMD_NS + '}ResourceProxy', nsmap=CMD_NAMESPACES)
+        proxy_node.attrib['{' + CMD_NS + '}id'] = identifier
+
+        resource_ref_node = etree.Element('{' + CMD_NS + '}ResourceRef', nsmap=CMD_NAMESPACES)
+        resource_ref_node.text = fulltext_dict[identifier]
+        proxy_node.insert(1, resource_ref_node)
+
+        index += 1
+        resource_proxies_list.insert(index, proxy_node)
+
+
+def insert_component_content(components_root, title, year):
     # Insert title info
     title_info_node = etree.Element('{' + CMDP_NS + '}TitleInfo', nsmap=CMD_NAMESPACES)
     title_node = etree.Element('{' + CMDP_NS + '}title', nsmap=CMD_NAMESPACES)
     title_node.text = f"{title} - {year}"
     title_info_node.insert(1, title_node)
-    components_root[0].insert(1, title_info_node)
+    components_root.insert(1, title_info_node)
 
     # TODO: description
     # TODO: language
@@ -234,41 +254,66 @@ def test_run():
     index = {
         "La clef du cabinet des princes de l'Europe": {
             "1716": [
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118435146",
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118435156",
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118435157",
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118435147",
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118435155",
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118435154",
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118435158",
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118435148",
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118435150",
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118435149",
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118435152",
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118435153"
+                "3000118435146",
+                "3000118435156",
+                "3000118435157",
+                "3000118435147",
+                "3000118435155",
+                "3000118435154",
+                "3000118435158",
+                "3000118435148",
+                "3000118435150",
+                "3000118435149",
+                "3000118435152",
+                "3000118435153"
+            ],
+            "1755": [
+                "3000118435713",
+                "3000118435724",
+                "3000118435719",
+                "3000118435718",
+                "3000118435722",
+                "3000118435714",
+                "3000118435715",
+                "3000118435723",
+                "3000118435717",
+                "3000118435721",
+                "3000118435720",
+                "3000118435716"
             ]
         },
         "Journal historique et litt\u00e9raire": {
             "1790": [
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118436032",
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118436022",
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118436014",
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118436015",
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118436023",
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118436033",
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118436028"
-            ],
-            "1779": [
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118436295",
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118436285",
-                "http://data.theeuropeanlibrary.org/BibliographicResource/3000118436300"
-            ]
-        }
+                "3000118436032",
+                "3000118436022",
+                "3000118436014",
+                "3000118436015",
+                "3000118436023",
+                "3000118436033",
+                "3000118436028",
+                "3000118436017",
+                "3000118436031",
+                "3000118436021",
+                "3000118436020",
+                "3000118436030",
+                "3000118436029",
+                "3000118436016",
+                "3000118436013",
+                "3000118436035",
+                "3000118436025",
+                "3000118436024",
+                "3000118436034",
+                "3000118436019",
+                "3000118436036",
+                "3000118436026",
+                "3000118436018",
+                "3000118436027"
+            ]}
     }
-    fulltext_ids = [
-        'http://data.theeuropeanlibrary.org/BibliographicResource/3000118436032',
-        'http://data.theeuropeanlibrary.org/BibliographicResource/3000118435146'
-    ]
+    fulltext_ids = {
+        '3000118435146': 'BibliographicResource_3000118435146.xml',
+        '3000118436032': 'BibliographicResource_3000118436032.xml'
+    }
     generate_cmdi_records(index, fulltext_ids, './output/9200396/fulltext', './test-output')
 
 
