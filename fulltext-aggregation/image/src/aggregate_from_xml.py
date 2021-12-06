@@ -192,11 +192,10 @@ def insert_resource_proxies(resource_proxies_list, ids, fulltext_dict):
         proxy_node = etree.SubElement(resource_proxies_list, '{' + CMD_NS + '}ResourceProxy', nsmap=CMD_NAMESPACES)
         proxy_node.attrib['id'] = xml_id(identifier)
 
-        resource_type_node = etree.Element('{' + CMD_NS + '}ResourceType', nsmap=CMD_NAMESPACES)
+        resource_type_node = etree.SubElement(proxy_node, '{' + CMD_NS + '}ResourceType', nsmap=CMD_NAMESPACES)
         resource_type_node.text = "Resource"
-        resource_ref_node = etree.Element('{' + CMD_NS + '}ResourceRef', nsmap=CMD_NAMESPACES)
+        resource_ref_node = etree.SubElement(proxy_node, '{' + CMD_NS + '}ResourceRef', nsmap=CMD_NAMESPACES)
         resource_ref_node.text = fulltext_dict[identifier]
-        proxy_node.insert(1, resource_ref_node)
 
 
 def insert_component_content(components_root, title, year, edm_records):
@@ -218,7 +217,7 @@ def insert_title_and_description(components_root, title, year):
 
     # Add description
     description_info_node = etree.SubElement(components_root, '{' + CMDP_NS + '}Description', nsmap=CMD_NAMESPACES)
-    description_node = etree.SubElement(description_info_node, '{' + CMDP_NS + '}title', nsmap=CMD_NAMESPACES)
+    description_node = etree.SubElement(description_info_node, '{' + CMDP_NS + '}description', nsmap=CMD_NAMESPACES)
     description_node.text = f"Full text content aggregated from Europeana. Title: {title} - {year}"
 
 
@@ -236,6 +235,8 @@ def insert_licences(components_root, edm_records):
             licence_node = etree.SubElement(access_info_node, '{' + CMDP_NS + '}Licence', nsmap=CMD_NAMESPACES)
             identifier_node = etree.SubElement(licence_node, '{' + CMDP_NS + '}identifier', nsmap=CMD_NAMESPACES)
             identifier_node.text = rights_url
+            label_node = etree.SubElement(licence_node, '{' + CMDP_NS + '}label', nsmap=CMD_NAMESPACES)
+            label_node.text = rights_url
             url_node = etree.SubElement(licence_node, '{' + CMDP_NS + '}url', nsmap=CMD_NAMESPACES)
             url_node.text = rights_url
 
