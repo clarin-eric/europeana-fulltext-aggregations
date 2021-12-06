@@ -14,6 +14,7 @@ CMDP_NS = 'http://www.clarin.eu/cmd/1/profiles/clarin.eu:cr1:p_1633000337997'
 
 EDM_NAMESPACES = {
     'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+    'ore': 'http://www.openarchives.org/ore/terms/',
     'edm': 'http://www.europeana.eu/schemas/edm/',
     'dc': 'http://purl.org/dc/elements/1.1/',
     'dcterms': 'http://purl.org/dc/terms/',
@@ -204,7 +205,7 @@ def insert_component_content(components_root, title, year, edm_records):
     # Description
     description_info_node = etree.SubElement(components_root, '{' + CMDP_NS + '}Description', nsmap=CMD_NAMESPACES)
     description_node = etree.SubElement(description_info_node, '{' + CMDP_NS + '}title', nsmap=CMD_NAMESPACES)
-    description_node.text = f"{title} - {year}"
+    description_node.text = f"Full text content aggregated from Europeana. Title: {title} - {year}"
 
     # Insert language information
     language_codes = get_unique_xpath_values(edm_records, '/rdf:RDF/edm:ProvidedCHO/dc:language/text()')
@@ -226,6 +227,16 @@ def insert_component_content(components_root, title, year, edm_records):
             language_name_node.text = language.name
             language_code_node = etree.SubElement(language_node, '{' + CMDP_NS + '}code', nsmap=CMD_NAMESPACES)
             language_code_node.text = language.part3
+
+    # TODO: licence
+    rights_urls = get_unique_xpath_values(edm_records, '/rdf:RDF/ore:Aggregation/edm:rights/@rdf:resource')
+    for rights_url in rights_urls:
+        access_info_node = etree.SubElement(components_root, '{' + CMDP_NS + '}AccessInfo', nsmap=CMD_NAMESPACES)
+        licence_node = etree.SubElement(access_info_node, '{' + CMDP_NS + '}Licence', nsmap=CMD_NAMESPACES)
+        identifier_node = etree.SubElement(licence_node, '{' + CMDP_NS + '}identifier', nsmap=CMD_NAMESPACES)
+        identifier_node.text = rights_url
+        url_node = etree.SubElement(components_root, '{' + CMDP_NS + '}url', nsmap=CMD_NAMESPACES)
+        url_node.text = rights_url
 
     # TODO: subresources
 

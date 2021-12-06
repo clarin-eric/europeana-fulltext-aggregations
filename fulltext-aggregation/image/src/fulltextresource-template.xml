@@ -22,9 +22,19 @@
     <cmd:IsPartOfList/>
     <cmd:Components>
         <TextResource>
+<!--            <TitleInfo>-->
+<!--                <title>title0</title>-->
+<!--            </TitleInfo>-->
 <!--            <Description>-->
 <!--                <description>description0</description>-->
 <!--            </Description>-->
+<!--            <AccessInfo>-->
+<!--                <Licence>-->
+<!--                    <identifier>identifier0</identifier>-->
+<!--                    <label>label0</label>-->
+<!--                    <url>url0</url>-->
+<!--                </Licence>-->
+<!--            </AccessInfo>-->
 <!--            <Subresource>-->
 <!--                <SubresourceDescription>-->
 <!--                    <label>label12</label>-->
