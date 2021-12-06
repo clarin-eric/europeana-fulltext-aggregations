@@ -6,6 +6,8 @@ import copy
 import unidecode
 import re
 from lxml import etree
+from itertools import chain
+from iso639 import languages
 
 CMD_NS = 'http://www.clarin.eu/cmd/1'
 CMDP_NS = 'http://www.clarin.eu/cmd/1/profiles/clarin.eu:cr1:p_1633000337997'
@@ -195,27 +197,47 @@ def insert_resource_proxies(resource_proxies_list, ids, fulltext_dict):
 
 def insert_component_content(components_root, title, year, edm_records):
     # Insert title info
-    title_info_node = etree.Element('{' + CMDP_NS + '}TitleInfo', nsmap=CMD_NAMESPACES)
-    title_node = etree.Element('{' + CMDP_NS + '}title', nsmap=CMD_NAMESPACES)
+    title_info_node = etree.SubElement(components_root, '{' + CMDP_NS + '}TitleInfo', nsmap=CMD_NAMESPACES)
+    title_node = etree.SubElement(title_info_node, '{' + CMDP_NS + '}title', nsmap=CMD_NAMESPACES)
     title_node.text = f"{title} - {year}"
-    title_info_node.insert(1, title_node)
-    components_root.insert(1, title_info_node)
 
-    # TODO: description
+    # Description
+    description_info_node = etree.SubElement(components_root, '{' + CMDP_NS + '}Description', nsmap=CMD_NAMESPACES)
+    description_node = etree.SubElement(description_info_node, '{' + CMDP_NS + '}title', nsmap=CMD_NAMESPACES)
+    description_node.text = f"{title} - {year}"
 
     # Insert language information
-    languages = get_all_xpath_values(edm_records, '/rdf:RDF/edm:ProvidedCHO/dc:language/text()')
-    # TODO: insert language elements (convert code???)
+    language_codes = get_unique_xpath_values(edm_records, '/rdf:RDF/edm:ProvidedCHO/dc:language/text()')
+    for language_code in language_codes:
+        language_node = etree.SubElement(components_root, '{' + CMDP_NS + '}Language', nsmap=CMD_NAMESPACES)
+        language_name_node = etree.SubElement(language_node, '{' + CMDP_NS + '}name', nsmap=CMD_NAMESPACES)
+
+        language = None
+        if len(language_code) == 2:
+            # lookup 639-1 code to get name + 3 letter code
+            language = languages.get(alpha2=language_code)
+        if len(language_code) == 3:
+            # lookup for 3 letter code
+            language = languages.get(part3=language_code)
+
+        if language is None:
+            language_name_node.text = language_code
+        else:
+            language_name_node.text = language.name
+            language_code_node = etree.SubElement(language_node, '{' + CMDP_NS + '}code', nsmap=CMD_NAMESPACES)
+            language_code_node.text = language.part3
 
     # TODO: subresources
+
+
+def get_unique_xpath_values(docs, path):
+    return list(dict.fromkeys(get_all_xpath_values(docs, path)))
 
 
 def get_all_xpath_values(docs, path):
     values = []
     for doc in docs:
-        for val in xpath(doc, path):
-            if val not in values:
-                values += [val]
+        values += xpath(doc, path)
     return values
 
 

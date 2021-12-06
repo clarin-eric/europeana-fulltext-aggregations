@@ -22,32 +22,27 @@
     <cmd:IsPartOfList/>
     <cmd:Components>
         <TextResource>
-            <Description>
-                <description>description0</description>
-            </Description>
-            <Language>
-                <name>name0</name>
-                <name>name1</name>
-                <code>code0</code>
-            </Language>
-            <Subresource>
-                <SubresourceDescription>
-                    <label>label12</label>
-                    <description>description6</description>
-                    <IdentificationInfo>
-                        <identifier type="DOI">http://www.oxygenxml.com/</identifier>
-                    </IdentificationInfo>
-                    <Language>
-                        <name>name7</name>
-                        <code>code5</code>
-                    </Language>
-                    <VersionInfo> </VersionInfo>
-                </SubresourceDescription>
-                <SubresourceTechnicalInfo>
-                    <type>type0</type>
-                    <mediaType>mediaType0</mediaType>
-                </SubresourceTechnicalInfo>
-            </Subresource>
+<!--            <Description>-->
+<!--                <description>description0</description>-->
+<!--            </Description>-->
+<!--            <Subresource>-->
+<!--                <SubresourceDescription>-->
+<!--                    <label>label12</label>-->
+<!--                    <description>description6</description>-->
+<!--                    <IdentificationInfo>-->
+<!--                        <identifier type="DOI">http://www.oxygenxml.com/</identifier>-->
+<!--                    </IdentificationInfo>-->
+<!--                    <Language>-->
+<!--                        <name>name7</name>-->
+<!--                        <code>code5</code>-->
+<!--                    </Language>-->
+<!--                    <VersionInfo> </VersionInfo>-->
+<!--                </SubresourceDescription>-->
+<!--                <SubresourceTechnicalInfo>-->
+<!--                    <type>type0</type>-->
+<!--                    <mediaType>mediaType0</mediaType>-->
+<!--                </SubresourceTechnicalInfo>-->
+<!--            </Subresource>-->
         </TextResource>
     </cmd:Components>
 </cmd:CMD>
