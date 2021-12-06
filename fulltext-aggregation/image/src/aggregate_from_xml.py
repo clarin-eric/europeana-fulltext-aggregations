@@ -207,6 +207,8 @@ def insert_component_content(components_root, title, year, edm_records):
     insert_publisher(components_root, edm_records)
     # Language information
     insert_languages(components_root, edm_records)
+    # Temporal coverage
+    insert_temporal_coverage(components_root, year)
     # Licence information
     insert_licences(components_root, edm_records)
     # Subresources
@@ -255,6 +257,21 @@ def insert_languages(parent, edm_records):
         create_language_component(parent, language_code)
 
 
+def insert_temporal_coverage(parent, year):
+    temporal_coverage_node = etree.SubElement(parent, '{' + CMDP_NS + '}TemporalCoverage',
+                                              nsmap=CMD_NAMESPACES)
+    label_node = etree.SubElement(temporal_coverage_node, '{' + CMDP_NS + '}label', nsmap=CMD_NAMESPACES)
+    label_node.text = year
+    start_year = etree.SubElement(etree.SubElement(
+        temporal_coverage_node, '{' + CMDP_NS + '}Start', nsmap=CMD_NAMESPACES),
+        '{' + CMDP_NS + '}year', nsmap=CMD_NAMESPACES)
+    start_year.text = year
+    end_year = etree.SubElement(etree.SubElement(
+        temporal_coverage_node, '{' + CMDP_NS + '}End', nsmap=CMD_NAMESPACES),
+        '{' + CMDP_NS + '}year', nsmap=CMD_NAMESPACES)
+    end_year.text = year
+
+
 def insert_licences(parent, edm_records):
     rights_urls = get_unique_xpath_values(edm_records, '/rdf:RDF/ore:Aggregation/edm:rights/@rdf:resource')
     if len(rights_urls) > 0:
@@ -272,7 +289,7 @@ def insert_licences(parent, edm_records):
 def insert_subresource_info(components_root, edm_records):
     for record in edm_records:
         identifiers = get_unique_xpath_values([record], '/rdf:RDF/edm:ProvidedCHO/dc:identifier/text()')
-        languages = get_unique_xpath_values([record], '/rdf:RDF/edm:ProvidedCHO/dc:language/text()')
+        language_codes = get_unique_xpath_values([record], '/rdf:RDF/edm:ProvidedCHO/dc:language/text()')
 
         subresource_node = etree.SubElement(components_root, '{' + CMDP_NS + '}Subresource', nsmap=CMD_NAMESPACES)
         subresource_description_node = etree.SubElement(subresource_node, '{' + CMDP_NS + '}SubresourceDescription',
@@ -280,6 +297,11 @@ def insert_subresource_info(components_root, edm_records):
         for title in get_unique_xpath_values([record], '/rdf:RDF/edm:ProvidedCHO/dc:title/text()'):
             label_node = etree.SubElement(subresource_description_node, '{' + CMDP_NS + '}label', nsmap=CMD_NAMESPACES)
             label_node.text = title
+        for description in get_unique_xpath_values([record], '/rdf:RDF/edm:ProvidedCHO/dcterms:extent/text()'
+                                                             '|/rdf:RDF/edm:ProvidedCHO/dc:type/text()'):
+            description_node = etree.SubElement(subresource_description_node,
+                                                '{' + CMDP_NS + '}description', nsmap=CMD_NAMESPACES)
+            description_node.text = description
         if len(identifiers) > 0:
             subresource_node.attrib['{' + CMD_NS + '}ref'] = xml_id(normalize_identifier(identifiers[0]))
             identification_info_node = etree.SubElement(subresource_description_node,
@@ -288,12 +310,19 @@ def insert_subresource_info(components_root, edm_records):
                 identifier_node = etree.SubElement(identification_info_node, '{' + CMDP_NS + '}identifier',
                                                    nsmap=CMD_NAMESPACES)
                 identifier_node.text = identifier
-        for language in languages:
-            create_language_component(subresource_description_node, language)
+        for language_code in language_codes:
+            create_language_component(subresource_description_node, language_code)
+        for issued_date in get_unique_xpath_values([record], '/rdf:RDF/edm:ProvidedCHO/dcterms:issued/text()'):
+            if is_valid_date(issued_date):
+                temporal_coverage_node = etree.SubElement(subresource_description_node,
+                                                          '{' + CMDP_NS + '}TemporalCoverage',
+                                                          nsmap=CMD_NAMESPACES)
+                label_node = etree.SubElement(temporal_coverage_node, '{' + CMDP_NS + '}label', nsmap=CMD_NAMESPACES)
+                label_node.text = issued_date
 
 
-def create_language_component(components_root, language_code):
-    language_node = etree.SubElement(components_root, '{' + CMDP_NS + '}Language', nsmap=CMD_NAMESPACES)
+def create_language_component(parent, language_code):
+    language_node = etree.SubElement(parent, '{' + CMDP_NS + '}Language', nsmap=CMD_NAMESPACES)
     language_name_node = etree.SubElement(language_node, '{' + CMDP_NS + '}name', nsmap=CMD_NAMESPACES)
     language = None
     if len(language_code) == 2:
@@ -362,13 +391,16 @@ def xml_id(identifier):
     return re.sub('[^A-z0-9_]', '_', new_id)
 
 
-
 def date_to_year(date):
     match = re.search(r"(\d{4})-\d{2}-\d{2}", date)
     if match:
         return match.group(1)
     else:
         return None
+
+
+def is_valid_date(date):
+    return re.match(r"(^\d{4})-\d{2}-\d{2}$", date) is not None
 
 
 def normalize_title(title):
@@ -464,9 +496,9 @@ def test_run():
         '3000118436279': 'BibliographicResource_3000118436279.xml'
     }
     generate_cmdi_records(index, fulltext_ids,
-                      metadata_dir='/Users/twagoo/Documents/Projects/Europeana/fulltext/dumps/edm-md/9200396',
-                      fulltext_dir='/Users/twagoo/Documents/Projects/Europeana/fulltext/dumps/edm-issue/9200396',
-                      output_dir='./test-output')
+                          metadata_dir='/Users/twagoo/Documents/Projects/Europeana/fulltext/dumps/edm-md/9200396',
+                          fulltext_dir='/Users/twagoo/Documents/Projects/Europeana/fulltext/dumps/edm-issue/9200396',
+                          output_dir='./test-output')
 
 
 if __name__ == "__main__":
