@@ -111,7 +111,9 @@ def generate_cmdi_records(index, fulltext_dict, metadata_dir, fulltext_dir, outp
                 file_name = f"{output_dir}/{filename_safe(title + '_' + year)}.cmdi"
                 logger.debug(f"Generating metadata file {file_name}")
                 cmdi_file = make_cmdi_record(template, title, year, ids, fulltext_dict, metadata_dir)
-                cmdi_file.write(file_name, pretty_print=True)
+                etree.indent(cmdi_file, space="  ", level=0)
+                etree.cleanup_namespaces(cmdi_file, top_nsmap=ALL_NAMESPACES)
+                cmdi_file.write(file_name, encoding='utf-8', pretty_print=True, xml_declaration=True)
 
 
 def collect_fulltext_ids(fulltext_dir):
@@ -235,7 +237,7 @@ def insert_component_content(components_root, title, year, edm_records):
         licence_node = etree.SubElement(access_info_node, '{' + CMDP_NS + '}Licence', nsmap=CMD_NAMESPACES)
         identifier_node = etree.SubElement(licence_node, '{' + CMDP_NS + '}identifier', nsmap=CMD_NAMESPACES)
         identifier_node.text = rights_url
-        url_node = etree.SubElement(components_root, '{' + CMDP_NS + '}url', nsmap=CMD_NAMESPACES)
+        url_node = etree.SubElement(licence_node, '{' + CMDP_NS + '}url', nsmap=CMD_NAMESPACES)
         url_node.text = rights_url
 
     # TODO: subresources
