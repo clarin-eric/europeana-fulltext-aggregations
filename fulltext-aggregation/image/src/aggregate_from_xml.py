@@ -154,7 +154,9 @@ def extract_fulltext_record_id(file_path):
 def make_cmdi_record(template, title, year, ids, fulltext_dict, metadata_dir):
     cmdi_file = copy.deepcopy(template)
 
-    # TODO: resource proxies
+    # TODO: Metadata headers
+
+    # Resource proxies
     resource_proxies_list = xpath(cmdi_file, '/cmd:CMD/cmd:Resources/cmd:ResourceProxyList')
     if len(resource_proxies_list) != 1:
         logger.error("Expecting exactly one components root element")
@@ -187,60 +189,96 @@ def load_emd_records(ids, metadata_dir):
 def insert_resource_proxies(resource_proxies_list, ids, fulltext_dict):
     index = 0
     for identifier in ids:
-        proxy_node = etree.Element('{' + CMD_NS + '}ResourceProxy', nsmap=CMD_NAMESPACES)
-        proxy_node.attrib['{' + CMD_NS + '}id'] = identifier
+        proxy_node = etree.SubElement(resource_proxies_list, '{' + CMD_NS + '}ResourceProxy', nsmap=CMD_NAMESPACES)
+        proxy_node.attrib['id'] = xml_id(identifier)
 
+        resource_type_node = etree.Element('{' + CMD_NS + '}ResourceType', nsmap=CMD_NAMESPACES)
+        resource_type_node.text = "Resource"
         resource_ref_node = etree.Element('{' + CMD_NS + '}ResourceRef', nsmap=CMD_NAMESPACES)
         resource_ref_node.text = fulltext_dict[identifier]
         proxy_node.insert(1, resource_ref_node)
 
-        index += 1
-        resource_proxies_list.insert(index, proxy_node)
-
 
 def insert_component_content(components_root, title, year, edm_records):
-    # Insert title info
+    # Title and description
+    insert_title_and_description(components_root, title, year)
+    # Language information
+    insert_languages(components_root, edm_records)
+    # Licence information
+    insert_licences(components_root, edm_records)
+    # Subresources
+    insert_subresource_info(components_root, edm_records)
+
+
+def insert_title_and_description(components_root, title, year):
+    # Add title info
     title_info_node = etree.SubElement(components_root, '{' + CMDP_NS + '}TitleInfo', nsmap=CMD_NAMESPACES)
     title_node = etree.SubElement(title_info_node, '{' + CMDP_NS + '}title', nsmap=CMD_NAMESPACES)
     title_node.text = f"{title} - {year}"
 
-    # Description
+    # Add description
     description_info_node = etree.SubElement(components_root, '{' + CMDP_NS + '}Description', nsmap=CMD_NAMESPACES)
     description_node = etree.SubElement(description_info_node, '{' + CMDP_NS + '}title', nsmap=CMD_NAMESPACES)
     description_node.text = f"Full text content aggregated from Europeana. Title: {title} - {year}"
 
-    # Insert language information
+
+def insert_languages(components_root, edm_records):
     language_codes = get_unique_xpath_values(edm_records, '/rdf:RDF/edm:ProvidedCHO/dc:language/text()')
     for language_code in language_codes:
-        language_node = etree.SubElement(components_root, '{' + CMDP_NS + '}Language', nsmap=CMD_NAMESPACES)
-        language_name_node = etree.SubElement(language_node, '{' + CMDP_NS + '}name', nsmap=CMD_NAMESPACES)
+        create_language_component(components_root, language_code)
 
-        language = None
-        if len(language_code) == 2:
-            # lookup 639-1 code to get name + 3 letter code
-            language = languages.get(alpha2=language_code)
-        if len(language_code) == 3:
-            # lookup for 3 letter code
-            language = languages.get(part3=language_code)
 
-        if language is None:
-            language_name_node.text = language_code
-        else:
-            language_name_node.text = language.name
-            language_code_node = etree.SubElement(language_node, '{' + CMDP_NS + '}code', nsmap=CMD_NAMESPACES)
-            language_code_node.text = language.part3
-
-    # TODO: licence
+def insert_licences(components_root, edm_records):
     rights_urls = get_unique_xpath_values(edm_records, '/rdf:RDF/ore:Aggregation/edm:rights/@rdf:resource')
-    for rights_url in rights_urls:
+    if len(rights_urls) > 0:
         access_info_node = etree.SubElement(components_root, '{' + CMDP_NS + '}AccessInfo', nsmap=CMD_NAMESPACES)
-        licence_node = etree.SubElement(access_info_node, '{' + CMDP_NS + '}Licence', nsmap=CMD_NAMESPACES)
-        identifier_node = etree.SubElement(licence_node, '{' + CMDP_NS + '}identifier', nsmap=CMD_NAMESPACES)
-        identifier_node.text = rights_url
-        url_node = etree.SubElement(licence_node, '{' + CMDP_NS + '}url', nsmap=CMD_NAMESPACES)
-        url_node.text = rights_url
+        for rights_url in rights_urls:
+            licence_node = etree.SubElement(access_info_node, '{' + CMDP_NS + '}Licence', nsmap=CMD_NAMESPACES)
+            identifier_node = etree.SubElement(licence_node, '{' + CMDP_NS + '}identifier', nsmap=CMD_NAMESPACES)
+            identifier_node.text = rights_url
+            url_node = etree.SubElement(licence_node, '{' + CMDP_NS + '}url', nsmap=CMD_NAMESPACES)
+            url_node.text = rights_url
 
-    # TODO: subresources
+
+def insert_subresource_info(components_root, edm_records):
+    for record in edm_records:
+        identifiers = get_unique_xpath_values([record], '/rdf:RDF/edm:ProvidedCHO/dc:identifier/text()')
+        languages = get_unique_xpath_values([record], '/rdf:RDF/edm:ProvidedCHO/dc:language/text()')
+
+        subresource_node = etree.SubElement(components_root, '{' + CMDP_NS + '}Subresource', nsmap=CMD_NAMESPACES)
+        subresource_description_node = etree.SubElement(subresource_node, '{' + CMDP_NS + '}SubresourceDescription',
+                                                        nsmap=CMD_NAMESPACES)
+        for title in get_unique_xpath_values([record], '/rdf:RDF/edm:ProvidedCHO/dc:title/text()'):
+            label_node = etree.SubElement(subresource_description_node, '{' + CMDP_NS + '}label', nsmap=CMD_NAMESPACES)
+            label_node.text = title
+        if len(identifiers) > 0:
+            subresource_node.attrib['{' + CMD_NS + '}ref'] = xml_id(normalize_identifier(identifiers[0]))
+            identification_info_node = etree.SubElement(subresource_description_node,
+                                                        '{' + CMDP_NS + '}IdentificationInfo', nsmap=CMD_NAMESPACES)
+            for identifier in identifiers:
+                identifier_node = etree.SubElement(identification_info_node, '{' + CMDP_NS + '}identifier',
+                                                   nsmap=CMD_NAMESPACES)
+                identifier_node.text = identifier
+        for language in languages:
+            create_language_component(subresource_description_node, language)
+
+
+def create_language_component(components_root, language_code):
+    language_node = etree.SubElement(components_root, '{' + CMDP_NS + '}Language', nsmap=CMD_NAMESPACES)
+    language_name_node = etree.SubElement(language_node, '{' + CMDP_NS + '}name', nsmap=CMD_NAMESPACES)
+    language = None
+    if len(language_code) == 2:
+        # lookup 639-1 code to get name + 3 letter code
+        language = languages.get(alpha2=language_code)
+    if len(language_code) == 3:
+        # lookup for 3 letter code
+        language = languages.get(part3=language_code)
+    if language is None:
+        language_name_node.text = language_code
+    else:
+        language_name_node.text = language.name
+        language_code_node = etree.SubElement(language_node, '{' + CMDP_NS + '}code', nsmap=CMD_NAMESPACES)
+        language_code_node.text = language.part3
 
 
 def get_unique_xpath_values(docs, path):
@@ -286,6 +324,14 @@ def normalize_identifier(identifier):
     else:
         logger.warning(f"Identifier {identifier} does not match pattern, skipping normalisation!")
         return identifier
+
+
+def xml_id(identifier):
+    new_id = identifier
+    if not re.match(r"^[A-z_]", identifier):
+        new_id = "_" + identifier
+    return re.sub('[^A-z0-9_]', '_', new_id)
+
 
 
 def date_to_year(date):
@@ -385,7 +431,8 @@ def test_run():
     }
     fulltext_ids = {
         '3000118435146': 'BibliographicResource_3000118435146.xml',
-        '3000118436295': 'BibliographicResource_3000118436295.xml'
+        '3000118436295': 'BibliographicResource_3000118436295.xml',
+        '3000118436279': 'BibliographicResource_3000118436279.xml'
     }
     generate_cmdi_records(index, fulltext_ids,
                       metadata_dir='/Users/twagoo/Documents/Projects/Europeana/fulltext/dumps/edm-md/9200396',

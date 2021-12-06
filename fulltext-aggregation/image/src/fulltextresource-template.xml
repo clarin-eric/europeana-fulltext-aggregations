@@ -21,38 +21,6 @@
     </cmd:Resources>
     <cmd:IsPartOfList/>
     <cmd:Components>
-        <TextResource>
-<!--            <TitleInfo>-->
-<!--                <title>title0</title>-->
-<!--            </TitleInfo>-->
-<!--            <Description>-->
-<!--                <description>description0</description>-->
-<!--            </Description>-->
-<!--            <AccessInfo>-->
-<!--                <Licence>-->
-<!--                    <identifier>identifier0</identifier>-->
-<!--                    <label>label0</label>-->
-<!--                    <url>url0</url>-->
-<!--                </Licence>-->
-<!--            </AccessInfo>-->
-<!--            <Subresource>-->
-<!--                <SubresourceDescription>-->
-<!--                    <label>label12</label>-->
-<!--                    <description>description6</description>-->
-<!--                    <IdentificationInfo>-->
-<!--                        <identifier type="DOI">http://www.oxygenxml.com/</identifier>-->
-<!--                    </IdentificationInfo>-->
-<!--                    <Language>-->
-<!--                        <name>name7</name>-->
-<!--                        <code>code5</code>-->
-<!--                    </Language>-->
-<!--                    <VersionInfo> </VersionInfo>-->
-<!--                </SubresourceDescription>-->
-<!--                <SubresourceTechnicalInfo>-->
-<!--                    <type>type0</type>-->
-<!--                    <mediaType>mediaType0</mediaType>-->
-<!--                </SubresourceTechnicalInfo>-->
-<!--            </Subresource>-->
-        </TextResource>
+        <TextResource />
     </cmd:Components>
 </cmd:CMD>
