@@ -1,3 +1,5 @@
+import datetime
+
 import common
 import logging
 import os
@@ -6,8 +8,10 @@ import copy
 import unidecode
 import re
 from lxml import etree
-from itertools import chain
+from datetime import date
 from iso639 import languages
+
+COLLECTION_DISPLAY_NAME = 'Europeana newspapers full-text'
 
 CMD_NS = 'http://www.clarin.eu/cmd/1'
 CMDP_NS = 'http://www.clarin.eu/cmd/1/profiles/clarin.eu:cr1:p_1633000337997'
@@ -154,7 +158,8 @@ def extract_fulltext_record_id(file_path):
 def make_cmdi_record(template, title, year, ids, fulltext_dict, metadata_dir):
     cmdi_file = copy.deepcopy(template)
 
-    # TODO: Metadata headers
+    # Metadata headers
+    set_metadata_headers(cmdi_file)
 
     # Resource proxies
     resource_proxies_list = xpath(cmdi_file, '/cmd:CMD/cmd:Resources/cmd:ResourceProxyList')
@@ -163,6 +168,7 @@ def make_cmdi_record(template, title, year, ids, fulltext_dict, metadata_dir):
     else:
         insert_resource_proxies(resource_proxies_list[0], ids, fulltext_dict)
 
+    # Component section
     components_root = xpath(cmdi_file, '/cmd:CMD/cmd:Components/cmdp:TextResource')
     if len(components_root) != 1:
         logger.error("Expecting exactly one components root element")
@@ -186,6 +192,24 @@ def load_emd_records(ids, metadata_dir):
     return edm_records
 
 
+def set_metadata_headers(doc):
+    creator_header = xpath(doc, '/cmd:CMD/cmd:Header/cmd:MdCreator')
+    if creator_header:
+        creator_header[0].text = os.path.basename(__file__)
+
+    creation_date_header = xpath(doc, '/cmd:CMD/cmd:Header/cmd:MdCreationDate')
+    if creation_date_header:
+        creation_date_header[0].text = date.today().strftime("%Y-%m-%d")
+
+    # TODO: SelfLink??
+
+    collection_name_header = xpath(doc, '/cmd:CMD/cmd:Header/cmd:MdCollectionDisplayName')
+    if collection_name_header:
+        collection_name_header[0].text = COLLECTION_DISPLAY_NAME
+
+
+
+
 def insert_resource_proxies(resource_proxies_list, ids, fulltext_dict):
     index = 0
     for identifier in ids:
@@ -194,6 +218,7 @@ def insert_resource_proxies(resource_proxies_list, ids, fulltext_dict):
 
         resource_type_node = etree.SubElement(proxy_node, '{' + CMD_NS + '}ResourceType', nsmap=CMD_NAMESPACES)
         resource_type_node.text = "Resource"
+        # TODO: resolve to base URL for full text resources!!!
         resource_ref_node = etree.SubElement(proxy_node, '{' + CMD_NS + '}ResourceRef', nsmap=CMD_NAMESPACES)
         resource_ref_node.text = fulltext_dict[identifier]
 

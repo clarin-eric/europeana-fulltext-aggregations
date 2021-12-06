@@ -7,12 +7,11 @@
     xsi:schemaLocation="http://www.clarin.eu/cmd/1 https://catalog.clarin.eu/ds/ComponentRegistry/rest/registry/1.x/profiles/clarin.eu:cr1:p_1633000337997/xsd"
     CMDVersion="1.2">
     <cmd:Header>
-        <cmd:MdCreator>MdCreator0</cmd:MdCreator>
-        <cmd:MdCreator>MdCreator1</cmd:MdCreator>
-        <cmd:MdCreationDate>2006-05-04</cmd:MdCreationDate>
-        <cmd:MdSelfLink>http://www.oxygenxml.com/</cmd:MdSelfLink>
-        <cmd:MdProfile>http://www.oxygenxml.com/</cmd:MdProfile>
-        <cmd:MdCollectionDisplayName>MdCollectionDisplayName0</cmd:MdCollectionDisplayName>
+        <cmd:MdCreator></cmd:MdCreator>
+        <cmd:MdCreationDate></cmd:MdCreationDate>
+<!--        <cmd:MdSelfLink>http://www.oxygenxml.com/</cmd:MdSelfLink>-->
+        <cmd:MdProfile>clarin.eu:cr1:p_1633000337997</cmd:MdProfile>
+        <cmd:MdCollectionDisplayName></cmd:MdCollectionDisplayName>
     </cmd:Header>
     <cmd:Resources>
         <cmd:ResourceProxyList />
