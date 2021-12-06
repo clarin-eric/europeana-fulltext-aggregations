@@ -201,6 +201,10 @@ def insert_resource_proxies(resource_proxies_list, ids, fulltext_dict):
 def insert_component_content(components_root, title, year, edm_records):
     # Title and description
     insert_title_and_description(components_root, title, year)
+    # Resource type
+    insert_keywords(components_root, edm_records)
+    # Publisher
+    insert_publisher(components_root, edm_records)
     # Language information
     insert_languages(components_root, edm_records)
     # Licence information
@@ -209,28 +213,52 @@ def insert_component_content(components_root, title, year, edm_records):
     insert_subresource_info(components_root, edm_records)
 
 
-def insert_title_and_description(components_root, title, year):
+def insert_title_and_description(parent, title, year):
     # Add title info
-    title_info_node = etree.SubElement(components_root, '{' + CMDP_NS + '}TitleInfo', nsmap=CMD_NAMESPACES)
+    title_info_node = etree.SubElement(parent, '{' + CMDP_NS + '}TitleInfo', nsmap=CMD_NAMESPACES)
     title_node = etree.SubElement(title_info_node, '{' + CMDP_NS + '}title', nsmap=CMD_NAMESPACES)
     title_node.text = f"{title} - {year}"
 
     # Add description
-    description_info_node = etree.SubElement(components_root, '{' + CMDP_NS + '}Description', nsmap=CMD_NAMESPACES)
+    description_info_node = etree.SubElement(parent, '{' + CMDP_NS + '}Description', nsmap=CMD_NAMESPACES)
     description_node = etree.SubElement(description_info_node, '{' + CMDP_NS + '}description', nsmap=CMD_NAMESPACES)
     description_node.text = f"Full text content aggregated from Europeana. Title: {title} - {year}"
 
+    # Add resource type ('Text')
+    resource_type_node = etree.SubElement(parent, '{' + CMDP_NS + '}ResourceType', nsmap=CMD_NAMESPACES)
+    resource_type_label_node = etree.SubElement(resource_type_node, '{' + CMDP_NS + '}label', nsmap=CMD_NAMESPACES)
+    resource_type_label_node.text = "Text"
 
-def insert_languages(components_root, edm_records):
+
+def insert_keywords(parent, edm_records):
+    # include dc:type values as keyword
+    keywords = get_unique_xpath_values(edm_records, '/rdf:RDF/edm:ProvidedCHO/dc:type/text()')
+    for keyword in keywords:
+        keyword_node = etree.SubElement(parent, '{' + CMDP_NS + '}Keyword', nsmap=CMD_NAMESPACES)
+        label_node = etree.SubElement(keyword_node, '{' + CMDP_NS + '}label', nsmap=CMD_NAMESPACES)
+        label_node.text = keyword
+
+
+def insert_publisher(parent, edm_records):
+    publishers = get_unique_xpath_values(edm_records,
+                                         '/rdf:RDF/ore:Aggregation/edm:dataProvider/text()'
+                                         '|/rdf:RDF/ore:Aggregation/edm:provider/text()')
+    for publisher in publishers:
+        keyword_node = etree.SubElement(parent, '{' + CMDP_NS + '}Publisher', nsmap=CMD_NAMESPACES)
+        label_node = etree.SubElement(keyword_node, '{' + CMDP_NS + '}name', nsmap=CMD_NAMESPACES)
+        label_node.text = publisher
+
+
+def insert_languages(parent, edm_records):
     language_codes = get_unique_xpath_values(edm_records, '/rdf:RDF/edm:ProvidedCHO/dc:language/text()')
     for language_code in language_codes:
-        create_language_component(components_root, language_code)
+        create_language_component(parent, language_code)
 
 
-def insert_licences(components_root, edm_records):
+def insert_licences(parent, edm_records):
     rights_urls = get_unique_xpath_values(edm_records, '/rdf:RDF/ore:Aggregation/edm:rights/@rdf:resource')
     if len(rights_urls) > 0:
-        access_info_node = etree.SubElement(components_root, '{' + CMDP_NS + '}AccessInfo', nsmap=CMD_NAMESPACES)
+        access_info_node = etree.SubElement(parent, '{' + CMDP_NS + '}AccessInfo', nsmap=CMD_NAMESPACES)
         for rights_url in rights_urls:
             licence_node = etree.SubElement(access_info_node, '{' + CMDP_NS + '}Licence', nsmap=CMD_NAMESPACES)
             identifier_node = etree.SubElement(licence_node, '{' + CMDP_NS + '}identifier', nsmap=CMD_NAMESPACES)
