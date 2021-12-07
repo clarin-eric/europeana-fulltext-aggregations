@@ -109,7 +109,6 @@ def filename_safe(name):
     return re.sub(r"[^A-z0-9]", '_', name)
 
 
-
 def get_unique_xpath_values(docs, path):
     return list(dict.fromkeys(get_all_xpath_values(docs, path)))
 
@@ -128,3 +127,17 @@ def filter_fulltext_ids(ids, fulltext_dir):
 
 def id_to_fulltext_file(identifier):
     return f"{id_to_filename(identifier)}.xml"
+
+
+def log_progress(logr, total, current, last_log, category=None, interval_pct=5, interval=-1):
+    if last_log is None:
+        last_log = 0
+
+    if interval < 1:
+        interval = .01 * interval_pct * total
+
+    if current >= last_log + interval:
+        logr.info(f"{category} - Progress: {current}/{total} ({current / total:2.0%})")
+        return current
+    else:
+        return last_log

@@ -5,18 +5,16 @@ import json
 from lxml import etree
 from aggregation_cmdi_creation import make_cmdi_record
 from common import ALL_NAMESPACES
-from common import get_mandatory_env_var
+from common import get_mandatory_env_var, log_progress
 from common import xpath_text_values
 from common import normalize_title, normalize_identifier, date_to_year, filename_safe
 
 logger = logging.getLogger(__name__)
 
 
-def generate(metadata_dir, fulltext_dir, output_dir):
+def generate(metadata_dir, fulltext_dir, full_text_base_url, output_dir):
     logging.basicConfig()
     logger.setLevel(logging.INFO)
-
-    full_text_base_url = get_mandatory_env_var('FULL_TEXT_BASE_URL')
 
     # 'index' metadata records based on properties
     logger.info("Making index for metadata")
@@ -29,7 +27,7 @@ def generate(metadata_dir, fulltext_dir, output_dir):
     fulltext_id_file_map = collect_fulltext_ids(fulltext_dir)
     # generate CMDI for the indexed property combinations
     logger.info(f"Creating CMDI record for items in index in {output_dir}")
-    generate_cmdi_records(index, fulltext_id_file_map, fulltext_dir, output_dir, full_text_base_url)
+    generate_cmdi_records(index, fulltext_id_file_map, metadata_dir, output_dir, full_text_base_url)
 
     logger.info("Done")
 
@@ -38,6 +36,9 @@ def make_md_index(metadata_dir):
     md_index = {}
     files = os.listdir(metadata_dir)
     logger.info(f"Reading metadata from {len(files)} files in {metadata_dir}")
+    total = len(files)
+    count = 0
+    last_log = 0
     for filename in files:
         if filename.endswith(".xml"):
             file_path = f"{metadata_dir}/{filename}"
@@ -57,6 +58,11 @@ def make_md_index(metadata_dir):
                     add_to_index(identifier, titles, years, md_index, filename)
             except etree.Error as err:
                 logger.error(f"Error processing XML document: {err=}")
+
+            count += 1
+            last_log = log_progress(logger, total, count, last_log,
+                                    category="Reading metadata files",
+                                    interval_pct=10)
     return md_index
 
 
@@ -75,10 +81,13 @@ def save_index(index, index_filename):
         json.dump(index, output_file, indent=True)
 
 
-def generate_cmdi_records(index, fulltext_dict, metadata_dir, fulltext_dir, output_dir, full_text_base_url):
+def generate_cmdi_records(index, fulltext_dict, metadata_dir, output_dir, full_text_base_url):
     os.makedirs(output_dir, exist_ok=True)
     script_path = os.path.dirname(os.path.realpath(__file__))
     template = etree.parse(f"{script_path}/fulltextresource-template.xml")
+    total = sum([len(index[title]) for title in index])
+    count = 0
+    last_log = 0
     for title in index:
         years = index[title]
         for year in years:
@@ -99,21 +108,29 @@ def generate_cmdi_records(index, fulltext_dict, metadata_dir, fulltext_dir, outp
                 etree.cleanup_namespaces(cmdi_file, top_nsmap=ALL_NAMESPACES)
                 cmdi_file.write(file_name, encoding='utf-8', pretty_print=True, xml_declaration=True)
 
+            count += 1
+            last_log = log_progress(logger, total, count, last_log,
+                                    category="Generating CMDI records",
+                                    interval=1)
+
 
 def collect_fulltext_ids(fulltext_dir):
     ids = {}
     files = os.listdir(fulltext_dir)
+    total = len(files)
     count = 0
-    length = len(files)
+    last_log = 0
     for filename in files:
         if filename.endswith(".xml"):
-            count += 1
             file_path = f"{fulltext_dir}/{filename}"
-            logger.debug(f"Getting identifier from {file_path} ({count}/{length})")
             identifier = extract_fulltext_record_id(file_path)
             if identifier is not None:
                 logger.debug(f"Extracted identifier {identifier}")
                 ids[normalize_identifier(identifier)] = filename
+        count += 1
+        last_log = log_progress(logger, total, count, last_log,
+                                category="Collecting identifiers from fulltext",
+                                interval=5)
 
     return ids
 
@@ -217,7 +234,6 @@ def test_run():
     }
     generate_cmdi_records(index, fulltext_ids,
                           metadata_dir='/Users/twagoo/Documents/Projects/Europeana/fulltext/dumps/edm-md/9200396',
-                          fulltext_dir='/Users/twagoo/Documents/Projects/Europeana/fulltext/dumps/edm-issue/9200396',
                           output_dir='./test-output',
                           full_text_base_url='http://www.clarin.eu/europeana/fulltext/9200396/')
 

@@ -1,9 +1,11 @@
-import common
 import api_retrieval
 import generate_cmdi
 import aggregate_from_xml
 import logging
 import sys
+from common import get_optional_env_var, get_mandatory_env_var, get_metadata_dir, get_fulltext_dir
+
+from common import DEFAULT_OUTPUT_DIRECTORY
 
 MODE_ALL = "all"
 MODE_RETRIEVE = "retrieve"
@@ -36,14 +38,15 @@ def run_command(command, arguments):
     logger.info(f"Command: {command}")
     logger.info(f"Arguments: {arguments}")
 
-    output_dir = common.get_optional_env_var('OUTPUT_DIR', common.DEFAULT_OUTPUT_DIRECTORY)
+    output_dir = get_optional_env_var('OUTPUT_DIR', DEFAULT_OUTPUT_DIRECTORY)
 
     if command == MODE_AGGREGATE_XML:
-        if len(arguments) < 3:
+        if len(arguments) < 4:
             print("ERROR: Provide locations for metadata and fulltext")
             print_usage()
             exit(1)
-        aggregate_from_xml.generate(arguments[0], arguments[1], arguments[2])
+
+        aggregate_from_xml.generate(arguments[0], arguments[1], arguments[2], arguments[3])
     if command == MODE_RETRIEVE:  # retrieve
         if len(arguments) < 1:
             print("ERROR: Provide a set identifier as the first argument")
@@ -68,8 +71,8 @@ def run_command(command, arguments):
 def process_all(ids, output_dir):
     for collection_id in ids:
         api_retrieval.retrieve(collection_id, output_dir)
-        generate_cmdi.generate(common.get_metadata_dir(output_dir, collection_id),
-                               common.get_fulltext_dir(output_dir, collection_id),
+        generate_cmdi.generate(get_metadata_dir(output_dir, collection_id),
+                               get_fulltext_dir(output_dir, collection_id),
                                f"{output_dir}/map-{collection_id}.json")
 
 
@@ -79,7 +82,7 @@ def print_usage():
         {sys.executable} {__file__} <command> <args>
 
     Commands:
-        {MODE_AGGREGATE_XML} <metadata path> <fulltext path> <output directory>
+        {MODE_AGGREGATE_XML} <metadata path> <fulltext path> <fulltext base directory> <output directory>
 
         {MODE_RETRIEVE} <collection id>
         {MODE_GENERATE_CMDI} <metadata path>  <fulltext path>
