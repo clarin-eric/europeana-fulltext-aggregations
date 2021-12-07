@@ -42,7 +42,7 @@ def run_command(command, arguments):
 
     if command == MODE_AGGREGATE_XML:
         if len(arguments) < 4:
-            print("ERROR: Provide locations for metadata and fulltext")
+            print("ERROR: Provide locations for metadata and fulltext and a resource base URL")
             print_usage()
             exit(1)
 
@@ -60,12 +60,6 @@ def run_command(command, arguments):
             print_usage()
             exit(1)
         generate_cmdi.generate(arguments[0], arguments[1])
-    if command == MODE_ALL:
-        if len(arguments) < 1:
-            print("ERROR: Provide at least one  set identifier as an argument")
-            print_usage()
-            exit(1)
-        process_all(arguments, output_dir)
 
 
 def process_all(ids, output_dir):
@@ -83,11 +77,6 @@ def print_usage():
 
     Commands:
         {MODE_AGGREGATE_XML} <metadata path> <fulltext path> <fulltext base directory> <output directory>
-
-        {MODE_RETRIEVE} <collection id>
-        {MODE_GENERATE_CMDI} <metadata path>  <fulltext path>
-
-        {MODE_ALL} <collection id> [<collection id> ...]
 
     """)
 
