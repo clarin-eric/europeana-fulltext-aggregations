@@ -2,13 +2,19 @@
 Usage with docker:
 
 ```shell
-docker-compose build #only before first run
+bash build.sh #only before first run
 
 cp .env-template .env
 vi .env # or editor of choice :)
 # configure Europeana API key and optionally a custom output directory
 
-docker-compose run europeana-aggregator 9200301 #or another collection with full text content to aggregate metadata and content for
+COLLECTION_ID=...... 
+
+bash run.sh europeana-aggregator aggregate-from-xml \
+	"/my/resources/${COLLECTION_ID}/metadata" \
+	"/my/resources/${COLLECTION_ID}/fulltext" \
+	"https://my-resources.org/${COLLECTION_ID}/fulltext/" \
+	"/my/records/cmdi/${COLLECTION_ID}" 
 ```
 
 Alternatively you can run the Python script in `image/src` locally.

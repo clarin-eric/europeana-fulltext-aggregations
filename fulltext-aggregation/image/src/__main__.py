@@ -76,7 +76,7 @@ def print_usage():
         {sys.executable} {__file__} <command> <args>
 
     Commands:
-        {MODE_AGGREGATE_XML} <metadata path> <fulltext path> <fulltext base directory> <output directory>
+        {MODE_AGGREGATE_XML} <metadata path> <fulltext path> <fulltext base URL> <output directory>
 
     """)
 
