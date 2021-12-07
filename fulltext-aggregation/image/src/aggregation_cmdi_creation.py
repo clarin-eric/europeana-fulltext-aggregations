@@ -57,7 +57,7 @@ def set_metadata_headers(doc):
 
     creation_date_header = xpath(doc, '/cmd:CMD/cmd:Header/cmd:MdCreationDate')
     if creation_date_header:
-        creation_date_header[0].text = date.today().strftime("%Y-%m-%d")
+        creation_date_header[0].text = today_string()
 
     # TODO: SelfLink??
 
@@ -94,6 +94,8 @@ def insert_component_content(components_root, title, year, edm_records):
     insert_licences(components_root, edm_records)
     # Subresources
     insert_subresource_info(components_root, edm_records)
+    # Metadata information
+    insert_metadata_info(components_root)
 
 
 def insert_title_and_description(parent, title, year):
@@ -218,3 +220,50 @@ def create_language_component(parent, language_code):
         language_name_node.text = language.name
         language_code_node = etree.SubElement(language_node, '{' + CMDP_NS + '}code', nsmap=CMD_NAMESPACES)
         language_code_node.text = language.part3
+
+
+def insert_metadata_info(parent):
+    metadata_info = etree.XML(f'''
+        <MetadataInfo>
+            <Publisher>
+              <name>CLARIN ERIC</name>
+              <ContactInfo>
+                <url>https://www.clarin.eu</url>
+              </ContactInfo>
+            </Publisher>
+            <ProvenanceInfo>
+              <Creation>
+                <ActivityInfo>
+                  <method>Creation and aggregation by The European Library/Europeana</method>
+                  <note>EDM metadata</note>
+                  <When>
+                    <label>Unspecified</label>
+                  </When>
+                </ActivityInfo>
+                <ActivityInfo>
+                  <method>Conversion</method>
+                  <note>Converted from EDM to CMDI</note>
+                  <When>
+                    <date>{today_string()}</date>
+                  </When>
+                </ActivityInfo>
+              </Creation>
+              <Collection>
+                <ActivityInfo>
+                  <method>Aggregation</method>
+                  <note>Metadata and full text retrieved from Europeana servers. See https://pro.europeana.eu/page/iiif#download</note>
+                  <When>
+                    <label>2021</label>
+                    <year>2021</year>
+                  </When>
+                </ActivityInfo>
+              </Collection>
+            </ProvenanceInfo>
+          </MetadataInfo>
+        ''')
+    parent.insert(len(parent), metadata_info)
+
+
+
+def today_string():
+    return date.today().strftime("%Y-%m-%d")
