@@ -1,9 +1,11 @@
 import logging
 import os
-import copy
+
+from copy import deepcopy
 from lxml import etree
 from datetime import date
 from iso639 import languages
+
 from common import CMD_NS, CMDP_NS, CMD_NAMESPACES
 from common import xpath, get_unique_xpath_values
 from common import normalize_identifier, xml_id, is_valid_date
@@ -14,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def make_cmdi_record(template, title, year, ids, fulltext_dict, metadata_dir, full_text_base_url):
-    cmdi_file = copy.deepcopy(template)
+    cmdi_file = deepcopy(template)
 
     # Metadata headers
     set_metadata_headers(cmdi_file)

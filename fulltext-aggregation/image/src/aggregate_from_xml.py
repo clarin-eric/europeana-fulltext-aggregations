@@ -1,8 +1,9 @@
-import common
+import json
 import logging
 import os
-import json
+
 from lxml import etree
+
 from aggregation_cmdi_creation import make_cmdi_record
 from common import ALL_NAMESPACES
 from common import get_mandatory_env_var, log_progress
