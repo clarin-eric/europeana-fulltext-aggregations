@@ -54,11 +54,14 @@ def get_fulltext_dir(basedir, collection_id):
     return f"{basedir}/{collection_id}/fulltext"
 
 
-def xpath(tree, path, namespaces=ALL_NAMESPACES):
+def xpath(tree, path, namespaces=None):
+    if namespaces is None:
+        # default to all namespaces
+        namespaces = ALL_NAMESPACES
     return tree.xpath(path, namespaces=namespaces)
 
 
-def xpath_text_values(tree, path, namespaces=ALL_NAMESPACES):
+def xpath_text_values(tree, path, namespaces=None):
     nodes = xpath(tree, path, namespaces)
     if nodes is None:
         return []

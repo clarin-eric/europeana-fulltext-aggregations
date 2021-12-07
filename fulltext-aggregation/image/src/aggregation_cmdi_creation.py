@@ -69,7 +69,6 @@ def set_metadata_headers(doc):
 
 
 def insert_resource_proxies(resource_proxies_list, ids, fulltext_dict, full_text_base_url):
-    index = 0
     for identifier in ids:
         proxy_node = etree.SubElement(resource_proxies_list, '{' + CMD_NS + '}ResourceProxy', nsmap=CMD_NAMESPACES)
         proxy_node.attrib['id'] = xml_id(identifier)
@@ -252,7 +251,8 @@ def insert_metadata_info(parent):
               <Collection>
                 <ActivityInfo>
                   <method>Aggregation</method>
-                  <note>Metadata and full text retrieved from Europeana servers. See https://pro.europeana.eu/page/iiif#download</note>
+                  <note>Metadata and full text retrieved from Europeana servers.
+                  See https://pro.europeana.eu/page/iiif#download</note>
                   <When>
                     <label>2021</label>
                     <year>2021</year>
@@ -263,7 +263,6 @@ def insert_metadata_info(parent):
           </MetadataInfo>
         ''')
     parent.insert(len(parent), metadata_info)
-
 
 
 def today_string():
