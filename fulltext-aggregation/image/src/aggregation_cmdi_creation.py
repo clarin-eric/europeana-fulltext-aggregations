@@ -13,7 +13,7 @@ COLLECTION_DISPLAY_NAME = 'Europeana newspapers full-text'
 logger = logging.getLogger(__name__)
 
 
-def make_cmdi_record(template, title, year, ids, fulltext_dict, metadata_dir):
+def make_cmdi_record(template, title, year, ids, fulltext_dict, metadata_dir, full_text_base_url):
     cmdi_file = copy.deepcopy(template)
 
     # Metadata headers
@@ -24,7 +24,7 @@ def make_cmdi_record(template, title, year, ids, fulltext_dict, metadata_dir):
     if len(resource_proxies_list) != 1:
         logger.error("Expecting exactly one components root element")
     else:
-        insert_resource_proxies(resource_proxies_list[0], ids, fulltext_dict)
+        insert_resource_proxies(resource_proxies_list[0], ids, fulltext_dict, full_text_base_url)
 
     # Component section
     components_root = xpath(cmdi_file, '/cmd:CMD/cmd:Components/cmdp:TextResource')
@@ -66,7 +66,7 @@ def set_metadata_headers(doc):
         collection_name_header[0].text = COLLECTION_DISPLAY_NAME
 
 
-def insert_resource_proxies(resource_proxies_list, ids, fulltext_dict):
+def insert_resource_proxies(resource_proxies_list, ids, fulltext_dict, full_text_base_url):
     index = 0
     for identifier in ids:
         proxy_node = etree.SubElement(resource_proxies_list, '{' + CMD_NS + '}ResourceProxy', nsmap=CMD_NAMESPACES)
@@ -74,9 +74,8 @@ def insert_resource_proxies(resource_proxies_list, ids, fulltext_dict):
 
         resource_type_node = etree.SubElement(proxy_node, '{' + CMD_NS + '}ResourceType', nsmap=CMD_NAMESPACES)
         resource_type_node.text = "Resource"
-        # TODO: resolve to base URL for full text resources!!!
         resource_ref_node = etree.SubElement(proxy_node, '{' + CMD_NS + '}ResourceRef', nsmap=CMD_NAMESPACES)
-        resource_ref_node.text = fulltext_dict[identifier]
+        resource_ref_node.text = f"{full_text_base_url}{fulltext_dict[identifier]}"
 
 
 def insert_component_content(components_root, title, year, edm_records):
