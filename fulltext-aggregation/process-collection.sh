@@ -62,24 +62,29 @@ download_and_unpack() {
   FILE="$2"
   DIR="$3"
   CHECKSUM_URL="$4"
-  wget -O "${FILE}" "${URL}"
-  if [ "${CHECKSUM_URL}" ]; then
-    echo "$(date) - Checking file integrity (${CHECKSUM_URL})"
-    MD5_FILE="$(mktemp)"
-    wget -q -O "${MD5_FILE}" "${CHECKSUM_URL}"
-    if ! echo "$(cat "${MD5_FILE}") ${FILE}" | md5sum -c; then
-      echo "$(date) - ERROR: checksum check failed"
-      rm "${FILE}"
-      return 1
-    else
-      rm "${MD5_FILE}"
+  if wget -O "${FILE}" "${URL}"; then
+    if [ "${CHECKSUM_URL}" ]; then
+      echo "$(date) - Checking file integrity (${CHECKSUM_URL})"
+      MD5_FILE="$(mktemp)"
+      wget -q -O "${MD5_FILE}" "${CHECKSUM_URL}"
+      if ! echo "$(cat "${MD5_FILE}") ${FILE}" | md5sum -c; then
+        echo "$(date) - ERROR: checksum check failed"
+        rm "${FILE}"
+        return 1
+      else
+        rm "${MD5_FILE}"
+      fi
+    fi
+
+    echo "$(date) - Decompressing ${FILE} in ${DIR}"
+    cd "${DIR}"
+    if unzip -q "${FILE}"; then
+      return 0
     fi
   fi
 
-  echo "$(date) - Decompressing ${FILE} in ${DIR}"
-  cd "${DIR}"
-  unzip -q "${FILE}"
-  return $?
+  # signal to retry (or give up)
+  return 1
 }
 
 main "$@"
