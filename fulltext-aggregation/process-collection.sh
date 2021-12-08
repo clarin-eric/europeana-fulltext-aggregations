@@ -78,13 +78,24 @@ download_and_unpack() {
 
     echo "$(date) - Decompressing ${FILE} in ${DIR}"
     cd "${DIR}"
-    if unzip -q "${FILE}"; then
+    if 7z-docker x "${FILE}"; then
       return 0
     fi
   fi
 
   # signal to retry (or give up)
   return 1
+}
+
+7z-docker() {
+  COMMAND="$1"
+  ZIP_FILE="$(realpath -- "$2")"
+  ZIP_DIR="$(dirname -- "${ZIP_FILE}")"
+  ZIP_NAME="$(basename -- "${ZIP_FILE}")"
+
+  docker run --rm -it \
+    --workdir '/data' -v "$(pwd):/data" -v "${ZIP_DIR}:/input" \
+    crazymax/7zip:16.02 7za "${COMMAND}" "/input/${ZIP_NAME}"
 }
 
 main "$@"
