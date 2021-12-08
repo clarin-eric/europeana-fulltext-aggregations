@@ -31,17 +31,22 @@ main() {
   mkdir -p "${DOWNLOAD_DIR}" "${METADATA_TARGET_DIR}" "${FULLTEXT_TARGET_DIR}" "${OUTPUT_BASE_DIR}"
   chmod -R og+rw "${DOWNLOAD_DIR}" "${OUTPUT_BASE_DIR}"
 
-  echo "$(date) Starting metadata download from ${METADATA_DUMP_URL} to ${METADATA_DUMP_FILE}"
-  wget -O "${METADATA_DUMP_FILE}" "${METADATA_DUMP_URL}"
-  cd "${METADATA_TARGET_DIR}"
-  echo "Decompressing ${METADATA_DUMP_FILE} in ${METADATA_TARGET_DIR}"
-  unzip  "${METADATA_DUMP_FILE}"
+  echo "$(date) - Starting metadata download from ${METADATA_DUMP_URL} to ${METADATA_DUMP_FILE}"
+  RESULT=1
+  while [ "${RESULT}" != "0" ]; do
+    download_and_unpack "${METADATA_DUMP_URL}" "${METADATA_DUMP_FILE}" "${METADATA_TARGET_DIR}" "${METADATA_DUMP_URL}.md5sum"
+    RESULT=$?
+  done
 
-  echo "$(date) Starting fulltext download from ${FULLTEXT_DUMP_URL} to ${FULLTEXT_DUMP_FILE}"
-  wget -O "${FULLTEXT_DUMP_FILE}" "${FULLTEXT_DUMP_URL}"
-  cd "${FULLTEXT_TARGET_DIR}"
-  echo "Decompressing ${FULLTEXT_DUMP_FILE} in ${FULLTEXT_TARGET_DIR}"
-  unzip  "${FULLTEXT_DUMP_FILE}"
+  echo "$(date) - Starting fulltext download from ${FULLTEXT_DUMP_URL} to ${FULLTEXT_DUMP_FILE}"
+  RESULT=1
+  while [ "${RESULT}" != "0" ]; do
+    download_and_unpack "${FULLTEXT_DUMP_URL}" "${FULLTEXT_DUMP_FILE}" "${FULLTEXT_TARGET_DIR}" "${FULLTEXT_DUMP_URL}.md5sum"
+    RESULT=$?
+    if [ "${RESULT}" != "0" ]; then
+      echo "$(date) - Retrying"
+    fi
+  done
 
   cd "${SCRIPT_DIR}" && bash run.sh \
     "${METADATA_TARGET_DIR}"\
@@ -50,6 +55,31 @@ main() {
     "${OUTPUT_DIR}"
 
   cd "${START_DIR}"
+}
+
+download_and_unpack() {
+  URL="$1"
+  FILE="$2"
+  DIR="$3"
+  CHECKSUM_URL="$4"
+  wget -O "${FILE}" "${URL}"
+  if [ "${CHECKSUM_URL}" ]; then
+    echo "$(date) - Checking file integrity (${CHECKSUM_URL})"
+    MD5_FILE="$(mktemp)"
+    wget -q -O "${MD5_FILE}" "${CHECKSUM_URL}"
+    if ! echo "$(cat "${MD5_FILE}") ${FILE}" | md5sum -c; then
+      echo "$(date) - ERROR: checksum check failed"
+      rm "${FILE}"
+      return 1
+    else
+      rm "${MD5_FILE}"
+    fi
+  fi
+
+  echo "$(date) - Decompressing ${FILE} in ${DIR}"
+  cd "${DIR}"
+  unzip -q "${FILE}"
+  return $?
 }
 
 main "$@"
