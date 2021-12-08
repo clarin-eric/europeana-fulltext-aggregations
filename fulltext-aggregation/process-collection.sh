@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 RESOURCES_BASE_URL="https://alpha-vlo.clarin.eu/data/europeana-aggregation/"
 INPUT_DATA_BASE_DIR="${HOME}/europeana-fulltext-aggregation/resources"
 OUTPUT_BASE_DIR="${HOME}/europeana-fulltext-aggregation/output"
@@ -27,20 +29,19 @@ main() {
   OUTPUT_DIR="${OUTPUT_BASE_DIR}/${COLLECTION_ID}"
 
   mkdir -p "${DOWNLOAD_DIR}" "${METADATA_TARGET_DIR}" "${FULLTEXT_TARGET_DIR}" "${OUTPUT_BASE_DIR}"
-  chown -R og+rw "${DOWNLOAD_DIR}" "${OUTPUT_BASE_DIR}"
+  chmod -R og+rw "${DOWNLOAD_DIR}" "${OUTPUT_BASE_DIR}"
 
-  echo "$(date) Starting metadata download"
+  echo "$(date) Starting metadata download from ${METADATA_DUMP_URL} to ${METADATA_DUMP_FILE}"
   wget -O "${METADATA_DUMP_FILE}" "${METADATA_DUMP_URL}"
   cd "${METADATA_TARGET_DIR}"
-  unzip  "${METADATA_DUMP_FILE}" &
-  MD_PID=$!
+  echo "Decompressing ${METADATA_DUMP_FILE} in ${METADATA_TARGET_DIR}"
+  unzip  "${METADATA_DUMP_FILE}"
 
-  echo "$(date) Starting fulltext download"
+  echo "$(date) Starting fulltext download from ${FULLTEXT_DUMP_URL} to ${FULLTEXT_DUMP_FILE}"
   wget -O "${FULLTEXT_DUMP_FILE}" "${FULLTEXT_DUMP_URL}"
   cd "${FULLTEXT_TARGET_DIR}"
+  echo "Decompressing ${FULLTEXT_DUMP_FILE} in ${FULLTEXT_TARGET_DIR}"
   unzip  "${FULLTEXT_DUMP_FILE}"
-
-  wait "${MD_PID}"
 
   cd "${SCRIPT_DIR}" && bash run.sh \
     "${METADATA_TARGET_DIR}"\
