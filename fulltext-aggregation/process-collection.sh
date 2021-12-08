@@ -28,8 +28,8 @@ main() {
   COLLECTION_RESOURCES_BASE_URL="${RESOURCES_BASE_URL}${COLLECTION_ID}/fulltext/"
   OUTPUT_DIR="${OUTPUT_BASE_DIR}/${COLLECTION_ID}"
 
-  mkdir -p "${DOWNLOAD_DIR}" "${METADATA_TARGET_DIR}" "${FULLTEXT_TARGET_DIR}" "${OUTPUT_BASE_DIR}"
-  chmod -R og+rw "${DOWNLOAD_DIR}" "${OUTPUT_BASE_DIR}"
+  mkdir -p "${DOWNLOAD_DIR}" "${METADATA_TARGET_DIR}" "${FULLTEXT_TARGET_DIR}" "${OUTPUT_DIR}"
+  chmod -R og+rw "${DOWNLOAD_DIR}" "${OUTPUT_DIR}"
 
   echo "$(date) - Starting metadata download from ${METADATA_DUMP_URL} to ${METADATA_DUMP_FILE}"
   RESULT=1
