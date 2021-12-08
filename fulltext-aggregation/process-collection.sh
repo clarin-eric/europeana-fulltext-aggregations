@@ -24,7 +24,7 @@ main() {
   METADATA_DUMP_URL="ftp://download.europeana.eu/newspapers/metadata/${COLLECTION_ID}.zip"
   FULLTEXT_DUMP_URL="ftp://download.europeana.eu/newspapers/fulltext/edm_issue/${COLLECTION_ID}.zip"
   METADATA_DUMP_FILE="${DOWNLOAD_DIR}/${COLLECTION_ID}_metadata.zip"
-  FULLTEXT_DUMP_FILE="${DOWNLOAD_DIR}/${COLLECTION_ID}_metadata.zip"
+  FULLTEXT_DUMP_FILE="${DOWNLOAD_DIR}/${COLLECTION_ID}_fulltext.zip"
   COLLECTION_RESOURCES_BASE_URL="${RESOURCES_BASE_URL}${COLLECTION_ID}/fulltext/"
   OUTPUT_DIR="${OUTPUT_BASE_DIR}/${COLLECTION_ID}"
 
@@ -48,7 +48,8 @@ main() {
     fi
   done
 
-  cd "${SCRIPT_DIR}" && bash run.sh \
+  echo "$(date) - Running aggregation scripts"
+  cd "${SCRIPT_DIR}" && bash run.sh 'aggregate-from-xml' \
     "${METADATA_TARGET_DIR}"\
     "${FULLTEXT_TARGET_DIR}"\
     "${COLLECTION_RESOURCES_BASE_URL}" \
@@ -79,6 +80,8 @@ download_and_unpack() {
     echo "$(date) - Decompressing ${FILE} in ${DIR}"
     cd "${DIR}"
     if 7z-docker x "${FILE}"; then
+      # Move all files in target directory 'root'
+      find "${DIR}" -mindepth 2 -type f -exec mv -t "${DIR}" -i '{}' +
       return 0
     fi
   fi
