@@ -81,7 +81,7 @@ download_and_unpack() {
     cd "${DIR}"
     if 7z-docker x "${FILE}"; then
       # Move all files in target directory 'root'
-      find "${DIR}" -mindepth 2 -type f -exec mv -t "${DIR}" -i '{}' +
+      find "${DIR}" -mindepth 2 -type f -exec "${MV_COMMAND:-mv}" -t "${DIR}" -i '{}' +
       return 0
     fi
   fi
@@ -96,7 +96,7 @@ download_and_unpack() {
   ZIP_DIR="$(dirname -- "${ZIP_FILE}")"
   ZIP_NAME="$(basename -- "${ZIP_FILE}")"
 
-  docker run --rm -it \
+  docker run --rm -it -u "${UID}" \
     --workdir '/data' -v "$(pwd):/data" -v "${ZIP_DIR}:/input" \
     crazymax/7zip:16.02 7za "${COMMAND}" "/input/${ZIP_NAME}"
 }
