@@ -17,7 +17,7 @@ echo "$(date) - run.sh - Resources base URL: '${BASE_URL:?Error - base url argum
 
 ( cd "${SCRIPT_DIR}" \
   && LOCAL_OUTPUT_DIR=${OUTPUT_DIR} \
-    docker-compose run \
+    docker-compose run --rm \
     -v "${MD_PATH}:/input/metadata" \
     -v "${FT_PATH}:/input/fulltext" \
     -e "OUTPUT_DIR=/output" \
