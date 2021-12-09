@@ -16,5 +16,5 @@ echo "$(date) - run.sh - Resources base URL: '${BASE_URL}'"
 ( cd "${SCRIPT_DIR}" && docker-compose run \
   -v "${MD_PATH}:/input/metadata" \
   -v "${FT_PATH}:/input/fulltext" \
-  -e "OUTPUT_DIR=${OUTPUT_DIR}"
+  -e "OUTPUT_DIR=${OUTPUT_DIR}" \
   'europeana-aggregator' "${MODE}" '/input/metadata' '/input/fulltext' "${BASE_URL}" '/output' )
