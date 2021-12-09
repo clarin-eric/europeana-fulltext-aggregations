@@ -2,7 +2,7 @@
 
 set -e
 
-RESOURCES_BASE_URL="https://alpha-vlo.clarin.eu/data/europeana-aggregation/"
+RESOURCES_BASE_URL="https://alpha-vlo.clarin.eu/data/test/resources/"
 INPUT_DATA_BASE_DIR="${HOME}/europeana-fulltext-aggregation/resources"
 OUTPUT_BASE_DIR="${HOME}/europeana-fulltext-aggregation/output"
 DOWNLOAD_DIR="${INPUT_DATA_BASE_DIR}/download"
@@ -26,6 +26,7 @@ main() {
   METADATA_DUMP_FILE="${DOWNLOAD_DIR}/${COLLECTION_ID}_metadata.zip"
   FULLTEXT_DUMP_FILE="${DOWNLOAD_DIR}/${COLLECTION_ID}_fulltext.zip"
   COLLECTION_RESOURCES_BASE_URL="${RESOURCES_BASE_URL}${COLLECTION_ID}/fulltext/"
+
   OUTPUT_DIR="${OUTPUT_BASE_DIR}/${COLLECTION_ID}"
 
   mkdir -p "${DOWNLOAD_DIR}" "${METADATA_TARGET_DIR}" "${FULLTEXT_TARGET_DIR}" "${OUTPUT_DIR}"
@@ -48,7 +49,7 @@ main() {
     fi
   done
 
-  echo "$(date) - Running aggregation scripts"
+  echo "$(date) - Running aggregation scripts."
   cd "${SCRIPT_DIR}" && bash run.sh 'aggregate-from-xml' \
     "${METADATA_TARGET_DIR}"\
     "${FULLTEXT_TARGET_DIR}"\
