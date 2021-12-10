@@ -5,15 +5,15 @@ import os
 from lxml import etree
 
 from aggregation_cmdi_creation import make_cmdi_record
-from common import ALL_NAMESPACES
-from common import get_mandatory_env_var, log_progress
+from common import log_progress
 from common import xpath_text_values
 from common import normalize_title, normalize_identifier, date_to_year, filename_safe
+from common import ALL_NAMESPACES
 
 logger = logging.getLogger(__name__)
 
 
-def generate(metadata_dir, fulltext_dir, full_text_base_url, output_dir):
+def generate(collection_id, metadata_dir, fulltext_dir, full_text_base_url, output_dir):
     logging.basicConfig()
     logger.setLevel(logging.INFO)
 
@@ -28,7 +28,7 @@ def generate(metadata_dir, fulltext_dir, full_text_base_url, output_dir):
     fulltext_id_file_map = collect_fulltext_ids(fulltext_dir)
     # generate CMDI for the indexed property combinations
     logger.info(f"Creating CMDI record for items in index in {output_dir}")
-    generate_cmdi_records(index, fulltext_id_file_map, metadata_dir, output_dir, full_text_base_url)
+    generate_cmdi_records(collection_id, index, fulltext_id_file_map, metadata_dir, output_dir, full_text_base_url)
 
     logger.info("Done")
 
@@ -82,7 +82,7 @@ def save_index(index, index_filename):
         json.dump(index, output_file, indent=True)
 
 
-def generate_cmdi_records(index, fulltext_dict, metadata_dir, output_dir, full_text_base_url):
+def generate_cmdi_records(collection_id, index, fulltext_dict, metadata_dir, output_dir, full_text_base_url):
     os.makedirs(output_dir, exist_ok=True)
     script_path = os.path.dirname(os.path.realpath(__file__))
     template = etree.parse(f"{script_path}/fulltextresource-template.xml")
@@ -104,7 +104,8 @@ def generate_cmdi_records(index, fulltext_dict, metadata_dir, output_dir, full_t
                              f"{len(title_year_ids)} identifiers for '{title}'/{year} ")
                 file_name = f"{output_dir}/{filename_safe(title + '_' + year)}.cmdi"
                 logger.debug(f"Generating metadata file {file_name}")
-                cmdi_file = make_cmdi_record(template, title, year, ids, fulltext_dict, metadata_dir, full_text_base_url)
+                cmdi_file = make_cmdi_record(template, collection_id, title, year, ids, fulltext_dict, metadata_dir,
+                                             full_text_base_url)
                 etree.indent(cmdi_file, space="  ", level=0)
                 etree.cleanup_namespaces(cmdi_file, top_nsmap=ALL_NAMESPACES)
                 cmdi_file.write(file_name, encoding='utf-8', pretty_print=True, xml_declaration=True)
@@ -233,7 +234,7 @@ def test_run():
         '3000118436295': 'BibliographicResource_3000118436295.xml',
         '3000118436279': 'BibliographicResource_3000118436279.xml'
     }
-    generate_cmdi_records(index, fulltext_ids,
+    generate_cmdi_records('9200396', index, fulltext_ids,
                           metadata_dir='/Users/twagoo/Documents/Projects/Europeana/fulltext/dumps/edm-md/9200396',
                           output_dir='./test-output',
                           full_text_base_url='http://www.clarin.eu/europeana/fulltext/9200396/')

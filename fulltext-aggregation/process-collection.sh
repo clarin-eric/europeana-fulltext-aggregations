@@ -50,9 +50,10 @@ main() {
   done
 
   echo "$(date) - Running aggregation scripts."
-  cd "${SCRIPT_DIR}" && bash run.sh 'aggregate-from-xml' \
-    "${METADATA_TARGET_DIR}"\
-    "${FULLTEXT_TARGET_DIR}"\
+  cd "${SCRIPT_DIR}" && bash run.sh \
+    "${COLLECTION_ID}" \
+    "${METADATA_TARGET_DIR}" \
+    "${FULLTEXT_TARGET_DIR}" \
     "${COLLECTION_RESOURCES_BASE_URL}" \
     "${OUTPUT_DIR}"
 

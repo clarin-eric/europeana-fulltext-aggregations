@@ -15,7 +15,7 @@ COLLECTION_DISPLAY_NAME = 'Europeana newspapers full-text'
 logger = logging.getLogger(__name__)
 
 
-def make_cmdi_record(template, title, year, ids, fulltext_dict, metadata_dir, full_text_base_url):
+def make_cmdi_record(template, collection_id, title, year, ids, fulltext_dict, metadata_dir, full_text_base_url):
     cmdi_file = deepcopy(template)
 
     # Metadata headers

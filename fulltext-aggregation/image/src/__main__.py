@@ -3,7 +3,7 @@ import generate_cmdi
 import aggregate_from_xml
 import logging
 import sys
-from common import get_optional_env_var, get_mandatory_env_var, get_metadata_dir, get_fulltext_dir
+from common import get_optional_env_var, get_metadata_dir, get_fulltext_dir
 
 from common import DEFAULT_OUTPUT_DIRECTORY
 
@@ -31,7 +31,7 @@ def main():
         print_usage()
         exit(1)
 
-    run_command(sys.argv[1], sys.argv[2:])
+    run_command(MODE_AGGREGATE_XML, sys.argv)
 
 
 def run_command(command, arguments):
@@ -46,7 +46,7 @@ def run_command(command, arguments):
             print_usage()
             exit(1)
 
-        aggregate_from_xml.generate(arguments[0], arguments[1], arguments[2], arguments[3])
+        aggregate_from_xml.generate(arguments[0], arguments[1], arguments[2], arguments[3], arguments[4])
     if command == MODE_RETRIEVE:  # retrieve
         if len(arguments) < 1:
             print("ERROR: Provide a set identifier as the first argument")
@@ -73,10 +73,8 @@ def process_all(ids, output_dir):
 def print_usage():
     print(f"""
     Usage:
-        {sys.executable} {__file__} <command> <args>
-
-    Commands:
-        {MODE_AGGREGATE_XML} <metadata path> <fulltext path> <fulltext base URL> <output directory>
+        {sys.executable} {__file__} <collection id> <metadata path> <fulltext path>
+                                    <fulltext base URL> <output directory>
 
     """)
 
