@@ -11,6 +11,8 @@ from common import xpath, get_unique_xpath_values
 from common import normalize_identifier, xml_id, is_valid_date
 
 COLLECTION_DISPLAY_NAME = 'Europeana newspapers full-text'
+DUMP_PROXY_ID = 'archive'
+DUMP_MEDIA_TYPE = 'application/zip'
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +28,7 @@ def make_cmdi_record(template, collection_id, title, year, ids, fulltext_dict, m
     if len(resource_proxies_list) != 1:
         logger.error("Expecting exactly one components root element")
     else:
-        insert_resource_proxies(resource_proxies_list[0], ids, fulltext_dict, full_text_base_url)
+        insert_resource_proxies(resource_proxies_list[0], collection_id, ids, fulltext_dict, full_text_base_url)
 
     # Component section
     components_root = xpath(cmdi_file, '/cmd:CMD/cmd:Components/cmdp:TextResource')
@@ -68,15 +70,25 @@ def set_metadata_headers(doc):
         collection_name_header[0].text = COLLECTION_DISPLAY_NAME
 
 
-def insert_resource_proxies(resource_proxies_list, ids, fulltext_dict, full_text_base_url):
+def insert_resource_proxies(resource_proxies_list, collection_id, ids, fulltext_dict, full_text_base_url):
+    # dump URL
+    insert_resource_proxy(resource_proxies_list, DUMP_PROXY_ID, "Resource",
+                          make_dump_ref(collection_id), DUMP_MEDIA_TYPE)
     for identifier in ids:
-        proxy_node = etree.SubElement(resource_proxies_list, '{' + CMD_NS + '}ResourceProxy', nsmap=CMD_NAMESPACES)
-        proxy_node.attrib['id'] = xml_id(identifier)
+        ref = f"{full_text_base_url}{fulltext_dict[identifier]}"
+        insert_resource_proxy(resource_proxies_list, xml_id(identifier), "Resource", ref)
 
-        resource_type_node = etree.SubElement(proxy_node, '{' + CMD_NS + '}ResourceType', nsmap=CMD_NAMESPACES)
-        resource_type_node.text = "Resource"
-        resource_ref_node = etree.SubElement(proxy_node, '{' + CMD_NS + '}ResourceRef', nsmap=CMD_NAMESPACES)
-        resource_ref_node.text = f"{full_text_base_url}{fulltext_dict[identifier]}"
+
+def insert_resource_proxy(parent, proxy_id, resource_type, ref, media_type=None):
+    proxy_node = etree.SubElement(parent, '{' + CMD_NS + '}ResourceProxy', nsmap=CMD_NAMESPACES)
+    proxy_node.attrib['id'] = proxy_id
+    resource_type_node = etree.SubElement(proxy_node, '{' + CMD_NS + '}ResourceType', nsmap=CMD_NAMESPACES)
+    resource_type_node.text = resource_type
+    resource_ref_node = etree.SubElement(proxy_node, '{' + CMD_NS + '}ResourceRef', nsmap=CMD_NAMESPACES)
+    resource_ref_node.text = ref
+
+    if media_type is not None:
+        resource_type_node.attrib['mimetype'] = media_type
 
 
 def insert_component_content(components_root, title, year, edm_records):
@@ -263,6 +275,10 @@ def insert_metadata_info(parent):
           </MetadataInfo>
         ''')
     parent.insert(len(parent), metadata_info)
+
+
+def make_dump_ref(collection_id):
+    return f"ftp://download.europeana.eu/newspapers/fulltext/edm_issue/{collection_id}.zip"
 
 
 def today_string():
