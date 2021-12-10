@@ -11,4 +11,4 @@ services:
       - RECORD_RETRIEVAL_LIMIT
       - OUTPUT_DIR=/output
     volumes:
-      - "${LOCAL_OUTPUT_DIR}:/output"
+      - "${LOCAL_OUTPUT_DIR:-./output}:/output"
