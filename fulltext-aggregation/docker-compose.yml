@@ -1,14 +1,25 @@
+#Example usage:
+# export COLLECTION_ID=9200396
+# export METADATA_PATH="${HOME}/Documents/Projects/Europeana/fulltext/dumps/edm-md/${COLLECTION_ID}"
+# export FULLTEXT_PATH="${HOME}/Documents/Projects/Europeana/fulltext/dumps/edm-issue/${COLLECTION_ID}"
+# export BASE_URL="https://www.clarin.eu/resources/europeana/fulltext/${COLLECTION_ID}/"
+# export OUTPUT_DIR="$(pwd)/output"
+# docker-compose run europeana-aggregator process
+
+
+
 version: "3.3"
 services:
   europeana-aggregator:
     image: europeana-aggregator:latest
     build: ./image
     environment:
-      - SEARCH_API_URL
-      - RECORD_API_URL
-      - IIIF_API_URL
-      - SEARCH_API_KEY
-      - RECORD_RETRIEVAL_LIMIT
+      - COLLECTION_ID=${COLLECTION_ID}
+      - BASE_URL=${BASE_URL}
+      - METADATA_PATH=/input/metadata
+      - FULLTEXT_PATH=/input/fulltext
       - OUTPUT_DIR=/output
     volumes:
-      - "${LOCAL_OUTPUT_DIR:-./output}:/output"
+      - "${METADATA_PATH:-./input/metadata}:/input/metadata"
+      - "${FULLTEXT_PATH:-./input/fulltext}:/input/fulltext"
+      - "${OUTPUT_DIR:-./output}:/output"

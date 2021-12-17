@@ -6,6 +6,7 @@ ENV OUTPUT_DIR=/output
 RUN apk add --no-cache \
     python3=3.9.5-r2 \
     py3-pip=20.3.4-r1 \
+    p7zip=16.02-r4 \
     && python3 -m pip install --no-cache-dir pip==21.3.1
 
 # set up worker user
@@ -19,6 +20,6 @@ WORKDIR /app
 # install script requirements
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
 
-ENTRYPOINT [ "python3", "./__main__.py" ]
+ENTRYPOINT [ "script/entrypoint.sh" ]
 
 VOLUME /output

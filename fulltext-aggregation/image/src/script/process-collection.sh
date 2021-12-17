@@ -13,9 +13,8 @@ main() {
   SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
   START_DIR="$(pwd)"
 
-  COLLECTION_ID="$1"
   if ! [ "${COLLECTION_ID}" ]; then
-    echo "Usage: $0 <collection id>"
+    echo "Error: COLLECTION_ID not set"
     exit 1
   fi
 
@@ -70,7 +69,7 @@ download_and_unpack() {
       echo "$(date) - Checking file integrity (${CHECKSUM_URL})"
       MD5_FILE="$(mktemp)"
       wget -q -O "${MD5_FILE}" "${CHECKSUM_URL}"
-      if ! echo "$(cat "${MD5_FILE}") ${FILE}" | md5sum -c; then
+      if ! echo "$(cat "${MD5_FILE}")  ${FILE}" | md5sum -c; then
         echo "$(date) - ERROR: checksum check failed"
         rm "${FILE}"
         return 1
@@ -81,7 +80,7 @@ download_and_unpack() {
 
     echo "$(date) - Decompressing ${FILE} in ${DIR}"
     cd "${DIR}"
-    if 7z-docker x "${FILE}"; then
+    if 7z x "${FILE}"; then
       # Move all files in target directory 'root'
       find "${DIR}" -mindepth 2 -type f -exec "${MV_COMMAND:-mv}" -t "${DIR}" -i '{}' +
       return 0
@@ -90,17 +89,6 @@ download_and_unpack() {
 
   # signal to retry (or give up)
   return 1
-}
-
-7z-docker() {
-  COMMAND="$1"
-  ZIP_FILE="$(realpath -- "$2")"
-  ZIP_DIR="$(dirname -- "${ZIP_FILE}")"
-  ZIP_NAME="$(basename -- "${ZIP_FILE}")"
-
-  docker run --rm -it -u "${UID}" \
-    --workdir '/data' -v "$(pwd):/data" -v "${ZIP_DIR}:/input" \
-    crazymax/7zip:16.02 7za "${COMMAND}" "/input/${ZIP_NAME}"
 }
 
 main "$@"
