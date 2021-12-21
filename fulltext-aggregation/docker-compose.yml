@@ -18,7 +18,7 @@ services:
       - FULLTEXT_PATH=/input/fulltext
       - OUTPUT_DIR=/output
     volumes:
-      - "${OUTPUT_DIR:-./output}:/output"
+      - "${LOCAL_OUTPUT_DIR:-./output}:/output"
       - input-storage:/input
 volumes:
   input-storage:

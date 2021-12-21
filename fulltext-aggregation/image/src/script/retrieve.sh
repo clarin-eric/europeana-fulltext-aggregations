@@ -8,7 +8,6 @@ OUTPUT_BASE_DIR="${OUTPUT_DIR}"
 DOWNLOAD_DIR="${INPUT_DATA_BASE_DIR}/download"
 
 
-
 main() {
   SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
   START_DIR="$(pwd)"
@@ -20,14 +19,13 @@ main() {
     exit 1
   fi
 
-  METADATA_TARGET_DIR="${INPUT_DATA_BASE_DIR}/${COLLECTION_ID}/metadata"
-  FULLTEXT_TARGET_DIR="${INPUT_DATA_BASE_DIR}/${COLLECTION_ID}/fulltext"
+  METADATA_TARGET_DIR="${INPUT_DATA_BASE_DIR}/${COLLECTION_ID}"
   METADATA_DUMP_URL="ftp://download.europeana.eu/dataset/XML/${COLLECTION_ID}.zip"
   METADATA_DUMP_FILE="${DOWNLOAD_DIR}/${COLLECTION_ID}_metadata.zip"
 
   OUTPUT_DIR="${OUTPUT_BASE_DIR}/${COLLECTION_ID}"
 
-  mkdir -p "${DOWNLOAD_DIR}" "${METADATA_TARGET_DIR}" "${FULLTEXT_TARGET_DIR}" "${OUTPUT_DIR}"
+  mkdir -p "${DOWNLOAD_DIR}" "${METADATA_TARGET_DIR}" "${OUTPUT_DIR}"
   chmod -R og+rw "${DOWNLOAD_DIR}" "${OUTPUT_DIR}"
 
   echo "$(date) - Starting metadata download from ${METADATA_DUMP_URL} to ${METADATA_DUMP_FILE}"

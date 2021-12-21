@@ -18,8 +18,11 @@ main() {
   COMMAND="$1"
   info "Command: ${COMMAND}"
   shift
-  ARGUMENTS="$@"
-  info "Arguments:" "$@"
+  ARGUMENTS=( "$@" )
+  info "Arguments:" "${ARGUMENTS[@]}"
+
+  [ "${INPUT_DIR:?Error - input directory not set}" ]
+  [ "${OUTPUT_DIR:?Error - Output directory not set}" ]
 
   case "${COMMAND}" in
 
@@ -28,13 +31,20 @@ main() {
       ;;
 
     'aggregate')
-      (cd "${SCRIPT_DIR}" && python3 -m __main.py__ aggregate "${ARGUMENTS}")
+      COLLECTION_ID="${ARGUMENTS[0]}"
+      INPUT="${INPUT_DIR}/${COLLECTION_ID}"
+      OUTPUT="${OUTPUT_DIR}/${COLLECTION_ID}"
+      mkdir -p "${OUTPUT}"
+      (
+        cd "${SCRIPT_DIR}/.." \
+          && python3 '__main__.py' "${COLLECTION_ID}" "${INPUT}" "${OUTPUT}"
+      )
       ;;
 
     'clean')
       echo "Erasing content of ${INPUT_DIR}"
       if [ -d "${INPUT_DIR}" ]; then
-        ( cd "${INPUT_DIR}" && find . -type d -maxdepth 1 -mindepth 1|xargs rm -rvf )
+        ( cd "${INPUT_DIR}" && find . -type d -maxdepth 1 -mindepth 1|xargs rm -rf )
       else
         echo "Error: ${INPUT_DIR} not found"
       fi
