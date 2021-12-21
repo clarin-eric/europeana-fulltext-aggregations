@@ -8,7 +8,9 @@ usage() {
   Usage: ${0} <command> <arguments..>
 
   Commands:
-    process
+    retrieve <collection id>
+    aggregate <...>
+    clean
   "
 }
 
@@ -21,8 +23,21 @@ main() {
 
   case "${COMMAND}" in
 
-    'process')
-      "${SCRIPT_DIR}/process-collection.sh" "${COLLECTION_ID}"
+    'retrieve')
+      "${SCRIPT_DIR}/retrieve.sh" "${ARGUMENTS}"
+      ;;
+
+    'aggregate')
+      (cd "${SCRIPT_DIR}" && python3 -m __main.py__ aggregate "${ARGUMENTS}")
+      ;;
+
+    'clean')
+      echo "Erasing content of ${INPUT_DIR}"
+      if [ -d "${INPUT_DIR}" ]; then
+        ( cd "${INPUT_DIR}" && find . -type d -maxdepth 1 -mindepth 1|xargs rm -rvf )
+      else
+        echo "Error: ${INPUT_DIR} not found"
+      fi
       ;;
 
     '*')

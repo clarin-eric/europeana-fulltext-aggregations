@@ -14,12 +14,11 @@ services:
     image: europeana-aggregator:latest
     build: ./image
     environment:
-      - COLLECTION_ID=${COLLECTION_ID}
-      - BASE_URL=${BASE_URL}
       - METADATA_PATH=/input/metadata
       - FULLTEXT_PATH=/input/fulltext
       - OUTPUT_DIR=/output
     volumes:
-      - "${METADATA_PATH:-./input/metadata}:/input/metadata"
-      - "${FULLTEXT_PATH:-./input/fulltext}:/input/fulltext"
       - "${OUTPUT_DIR:-./output}:/output"
+      - input-storage:/input
+volumes:
+  input-storage:
