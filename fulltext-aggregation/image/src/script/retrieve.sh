@@ -1,11 +1,8 @@
 #!/bin/bash
-
 set -e
 
-RESOURCES_BASE_URL="${RESOURCES_BASE_URL:-https://alpha-vlo.clarin.eu/data/test/resources/}"
-INPUT_DATA_BASE_DIR="${INPUT_DIR}"
-OUTPUT_BASE_DIR="${OUTPUT_DIR}"
-DOWNLOAD_DIR="${INPUT_DATA_BASE_DIR}/download"
+COLLECTION_TARGET_DIR="${INPUT_DIR}"
+DOWNLOAD_DIR="${COLLECTION_TARGET_DIR}/download"
 
 
 main() {
@@ -19,24 +16,23 @@ main() {
     exit 1
   fi
 
-  METADATA_TARGET_DIR="${INPUT_DATA_BASE_DIR}/${COLLECTION_ID}"
+  COLLECTION_TARGET_DIR="${COLLECTION_TARGET_DIR}/${COLLECTION_ID}"
   METADATA_DUMP_URL="ftp://download.europeana.eu/dataset/XML/${COLLECTION_ID}.zip"
   METADATA_DUMP_FILE="${DOWNLOAD_DIR}/${COLLECTION_ID}_metadata.zip"
 
-  OUTPUT_DIR="${OUTPUT_BASE_DIR}/${COLLECTION_ID}"
-
-  mkdir -p "${DOWNLOAD_DIR}" "${METADATA_TARGET_DIR}" "${OUTPUT_DIR}"
-  chmod -R og+rw "${DOWNLOAD_DIR}" "${OUTPUT_DIR}"
+  mkdir -p "${DOWNLOAD_DIR}" "${COLLECTION_TARGET_DIR}"
+  chmod -R og+rw "${DOWNLOAD_DIR}"
 
   echo "$(date) - Starting metadata download from ${METADATA_DUMP_URL} to ${METADATA_DUMP_FILE}"
   RESULT=1
   while [ "${RESULT}" != "0" ]; do
-    download_and_unpack "${METADATA_DUMP_URL}" "${METADATA_DUMP_FILE}" "${METADATA_TARGET_DIR}" "${METADATA_DUMP_URL}.md5sum"
+    download_and_unpack "${METADATA_DUMP_URL}" "${METADATA_DUMP_FILE}" "${COLLECTION_TARGET_DIR}" "${METADATA_DUMP_URL}.md5sum"
     RESULT=$?
   done
 
   echo "$(date) - Done retrieving and unpacking for collection ${COLLECTION_ID}."
 }
+
 
 download_and_unpack() {
   URL="$1"
