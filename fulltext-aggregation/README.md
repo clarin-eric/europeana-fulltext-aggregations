@@ -10,11 +10,10 @@ vi .env # or editor of choice :)
 
 COLLECTION_ID=...... 
 
-bash run.sh europeana-aggregator aggregate-from-xml \
-	"/my/resources/${COLLECTION_ID}/metadata" \
-	"/my/resources/${COLLECTION_ID}/fulltext" \
-	"https://my-resources.org/${COLLECTION_ID}/fulltext/" \
-	"/my/records/cmdi/${COLLECTION_ID}" 
+# retrieve metadata dump from server
+./run.sh retrieve "${COLLECTION_ID}"
+# run aggregation scripts
+./run.sh aggregate "${COLLECTION_ID}"
 ```
 
 Alternatively you can run the Python script in `image/src` locally.
