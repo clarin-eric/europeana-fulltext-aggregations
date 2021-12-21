@@ -2,6 +2,8 @@ import os
 import re
 import logging
 import unidecode
+import requests
+import json
 
 DEFAULT_OUTPUT_DIRECTORY = "./output"
 
@@ -130,6 +132,17 @@ def filter_fulltext_ids(ids, fulltext_dir):
 
 def id_to_fulltext_file(identifier):
     return f"{id_to_filename(identifier)}.xml"
+
+
+def get_json_from_http(url):
+    logger.debug(f"Making request: {url}")
+    response = requests.get(url).text
+    logger.debug(f"API response: {url}")
+    try:
+        return json.loads(response)
+    except json.JSONDecodeError:
+        logger.error(f"Error decoding response from {url}")
+        return None
 
 
 def log_progress(logr, total, current, last_log, category=None, interval_pct=5, interval=-1):

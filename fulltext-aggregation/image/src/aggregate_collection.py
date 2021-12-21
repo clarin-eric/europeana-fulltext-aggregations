@@ -7,11 +7,17 @@ from lxml import etree
 
 from aggregation_cmdi_creation import make_cmdi_record
 from common import log_progress
-from common import xpath_text_values
+from common import xpath, xpath_text_values
 from common import normalize_title, normalize_identifier, date_to_year, filename_safe
+from common import get_json_from_http
+from common import get_optional_env_var
+
 from common import ALL_NAMESPACES
 
 logger = logging.getLogger(__name__)
+
+
+IIIF_API_URL = get_optional_env_var('IIIF_API_URL', 'https://iiif.europeana.eu')
 
 
 def aggregate(collection_id, metadata_dir, output_dir):
@@ -21,7 +27,6 @@ def aggregate(collection_id, metadata_dir, output_dir):
     # 'index' metadata records based on properties
     logger.info("Making index for metadata")
     index = make_md_index(metadata_dir)
-
 
     # # save index to file in output directory
     # logger.info(f"Writing index to file")
@@ -60,9 +65,12 @@ def make_md_index(metadata_dir):
                     years = [date_to_year(date)
                              for date in xpath_text_values(doc, '/rdf:RDF/ore:Proxy/dcterms:issued')]
 
-                    #TODO: IIIF reference
+                    annotation_refs = []
+                    iiif_referencees = xpath(doc, '/rdf:RDF/edm:WebResource/dcterms:isReferencedBy/@rdf:resource')
+                    for manifest_url in list(set(iiif_referencees)):
+                        annotation_refs += retrieve_annotation_refs(manifest_url)
 
-                    add_to_index(md_index, identifier, titles, years, filename)
+                    add_to_index(md_index, identifier, titles, years, filename, annotation_refs)
             except etree.Error as err:
                 logger.error(f"Error processing XML document: {err=}")
 
@@ -73,7 +81,32 @@ def make_md_index(metadata_dir):
     return md_index
 
 
-def add_to_index(index, identifier, titles, years, filename):
+def retrieve_annotation_refs(iiif_manifest_url):
+    if not iiif_manifest_url.startswith(IIIF_API_URL):
+        logger.warning(f"Skipping URL, not a IIIF service URL: {iiif_manifest_url}")
+        return []
+
+    logger.debug(f"Getting manifest for from {iiif_manifest_url}")
+    manifest = get_json_from_http(iiif_manifest_url)
+
+    if manifest is None:
+        logger.warning(f"No valid response from manifest request at {iiif_manifest_url}")
+    else:
+        # collection annotation URLs for record
+        annotation_urls = []
+        # TODO: Use GLOM for this?
+        for sequence in manifest.get("sequences", []):
+            for canvas in sequence.get("canvases", []):
+                for otherContent in canvas.get("otherContent", []):
+                    if isinstance(otherContent, str) and otherContent.startswith(IIIF_API_URL):
+                        annotation_urls += [otherContent]
+
+        return annotation_urls
+
+
+def add_to_index(index, identifier, titles, years, filename, annotation_refs):
+    # TODO: make object with filename + annotation refs array
+
     for title in titles:
         if title not in index:
             index[title] = {}
@@ -164,9 +197,10 @@ def extract_fulltext_record_id(file_path):
 
 
 def test_run():
-    result = aggregate('9200396',
-              metadata_dir='/Users/twagoo/Documents/Projects/Europeana/fulltext/dumps/edm-dataset/9200396',
-              output_dir='./output')
+    collection_id = '9200396'
+    result = aggregate('collection_id',
+                       metadata_dir=f"./test-input/{collection_id}",
+                       output_dir=f"./test-output/{collection_id}")
     pprint.pprint(result)
 
 
