@@ -35,24 +35,28 @@ def make_cmdi_record(template, collection_id, title, year, records, metadata_dir
     components_root = xpath(cmdi_file, '/cmd:CMD/cmd:Components/cmdp:TextResource')
     if len(components_root) != 1:
         logger.error("Expecting exactly one components root element")
-    # else:
-        # TODO: load EDM metadata records
-        # edm_records = load_emd_records(ids, metadata_dir)
+    else:
+        # load EDM metadata records
+        edm_records = load_emd_records(records, metadata_dir)
         # TODO: insert component content
-        # insert_component_content(components_root[0], title, year, edm_records)
+        insert_component_content(components_root[0], title, year, edm_records)
 
     return cmdi_file
 
 
-def load_emd_records(ids, metadata_dir):
+def load_emd_records(records_map, metadata_dir):
     edm_records = []
-    for identifier in ids:
-        file_path = f"{metadata_dir}/{ids[identifier]}"
-        logger.debug(f"Loading metadata file {file_path}")
-        try:
-            edm_records += [etree.parse(file_path)]
-        except etree.Error as err:
-            logger.error(f"Error processing XML document: {err=}")
+    for identifier in records_map:
+        file_name = records_map[identifier].get('file', None)
+        if file_name is None:
+            logger.error(f"No file name in records map for {identifier}")
+        else:
+            file_path = f"{metadata_dir}/{file_name}"
+            logger.debug(f"Loading metadata file {file_path}")
+            try:
+                edm_records += [etree.parse(file_path)]
+            except etree.Error as err:
+                logger.error(f"Error processing XML document: {err=}")
     return edm_records
 
 
@@ -78,7 +82,7 @@ def insert_resource_proxies(resource_proxies_list, collection_id, records):
                           make_dump_ref(collection_id), DUMP_MEDIA_TYPE)
     # 'records' is a map identifer -> {file, annotation_refs[]}
     for identifier in records:
-        index = 1
+        index = 0
         for ref in records[identifier].get('annotation_refs', None):
             if ref is not None:
                 index += 1
@@ -135,7 +139,7 @@ def insert_title_and_description(parent, title, year):
 
 def insert_keywords(parent, edm_records):
     # include dc:type values as keyword
-    keywords = get_unique_xpath_values(edm_records, '/rdf:RDF/edm:ProvidedCHO/dc:type/text()')
+    keywords = get_unique_xpath_values(edm_records, '/rdf:RDF/ore:Proxy/dc:type/text()')
     for keyword in keywords:
         keyword_node = etree.SubElement(parent, '{' + CMDP_NS + '}Keyword', nsmap=CMD_NAMESPACES)
         label_node = etree.SubElement(keyword_node, '{' + CMDP_NS + '}label', nsmap=CMD_NAMESPACES)
@@ -153,7 +157,7 @@ def insert_publisher(parent, edm_records):
 
 
 def insert_languages(parent, edm_records):
-    language_codes = get_unique_xpath_values(edm_records, '/rdf:RDF/edm:ProvidedCHO/dc:language/text()')
+    language_codes = get_unique_xpath_values(edm_records, '/rdf:RDF/ore:Proxy/dc:language/text()')
     for language_code in language_codes:
         create_language_component(parent, language_code)
 
@@ -189,22 +193,22 @@ def insert_licences(parent, edm_records):
 
 def insert_subresource_info(components_root, edm_records):
     for record in edm_records:
-        identifiers = get_unique_xpath_values([record], '/rdf:RDF/edm:ProvidedCHO/dc:identifier/text()')
-        language_codes = get_unique_xpath_values([record], '/rdf:RDF/edm:ProvidedCHO/dc:language/text()')
+        identifiers = get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:identifier/text()')
+        language_codes = get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:language/text()')
 
         subresource_node = etree.SubElement(components_root, '{' + CMDP_NS + '}Subresource', nsmap=CMD_NAMESPACES)
         subresource_description_node = etree.SubElement(subresource_node, '{' + CMDP_NS + '}SubresourceDescription',
                                                         nsmap=CMD_NAMESPACES)
-        for title in get_unique_xpath_values([record], '/rdf:RDF/edm:ProvidedCHO/dc:title/text()'):
+        for title in get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:title/text()'):
             label_node = etree.SubElement(subresource_description_node, '{' + CMDP_NS + '}label', nsmap=CMD_NAMESPACES)
             label_node.text = title
-        for description in get_unique_xpath_values([record], '/rdf:RDF/edm:ProvidedCHO/dcterms:extent/text()'
-                                                             '|/rdf:RDF/edm:ProvidedCHO/dc:type/text()'):
-            description_node = etree.SubElement(subresource_description_node,
-                                                '{' + CMDP_NS + '}description', nsmap=CMD_NAMESPACES)
-            description_node.text = description
+        # for description in get_unique_xpath_values([record], '/rdf:RDF/edm:ProvidedCHO/dcterms:extent/text()'
+        #                                                      '|/rdf:RDF/edm:ProvidedCHO/dc:type/text()'):
+        #     description_node = etree.SubElement(subresource_description_node,
+        #                                         '{' + CMDP_NS + '}description', nsmap=CMD_NAMESPACES)
+        #     description_node.text = description
         if len(identifiers) > 0:
-            subresource_node.attrib['{' + CMD_NS + '}ref'] = xml_id(normalize_identifier(identifiers[0]))
+            subresource_node.attrib['{' + CMD_NS + '}ref'] = xml_id(normalize_identifier(identifiers[0])+'_1')
             identification_info_node = etree.SubElement(subresource_description_node,
                                                         '{' + CMDP_NS + '}IdentificationInfo', nsmap=CMD_NAMESPACES)
             for identifier in identifiers:
@@ -213,7 +217,7 @@ def insert_subresource_info(components_root, edm_records):
                 identifier_node.text = identifier
         for language_code in language_codes:
             create_language_component(subresource_description_node, language_code)
-        for issued_date in get_unique_xpath_values([record], '/rdf:RDF/edm:ProvidedCHO/dcterms:issued/text()'):
+        for issued_date in get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dcterms:issued/text()'):
             if is_valid_date(issued_date):
                 temporal_coverage_node = etree.SubElement(subresource_description_node,
                                                           '{' + CMDP_NS + '}TemporalCoverage',
