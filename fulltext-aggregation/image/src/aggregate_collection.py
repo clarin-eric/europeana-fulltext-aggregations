@@ -153,11 +153,11 @@ def generate_cmdi_records(collection_id, index, metadata_dir, output_dir):
                         logger.debug(f"Found {len(annotation_urls)} fulltext annotations for '{title}'/{year} ")
                         file_name = f"{output_dir}/{filename_safe(title + '_' + year)}.cmdi"
                         logger.debug(f"Generating metadata file {file_name}")
-                        # cmdi_file = make_cmdi_record(template, collection_id, title, year, ids, fulltext_dict, metadata_dir,
-                        #                              full_text_base_url)
-                        # etree.indent(cmdi_file, space="  ", level=0)
-                        # etree.cleanup_namespaces(cmdi_file, top_nsmap=ALL_NAMESPACES)
-                        # cmdi_file.write(file_name, encoding='utf-8', pretty_print=True, xml_declaration=True)
+                        cmdi_file = make_cmdi_record(template, collection_id, title, year, annotation_urls,
+                                                     metadata_dir, files)
+                        etree.indent(cmdi_file, space="  ", level=0)
+                        etree.cleanup_namespaces(cmdi_file, top_nsmap=ALL_NAMESPACES)
+                        cmdi_file.write(file_name, encoding='utf-8', pretty_print=True, xml_declaration=True)
 
             count += 1
             last_log = log_progress(logger, total, count, last_log,
@@ -208,7 +208,7 @@ def extract_fulltext_record_id(file_path):
 
 def test_run():
     collection_id = '9200396'
-    result = aggregate('collection_id',
+    result = aggregate(collection_id,
                        metadata_dir=f"./test-input/{collection_id}",
                        output_dir=f"./test-output/{collection_id}")
     # pprint.pprint(result)

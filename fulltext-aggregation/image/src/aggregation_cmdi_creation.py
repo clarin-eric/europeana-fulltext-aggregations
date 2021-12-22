@@ -17,7 +17,8 @@ DUMP_MEDIA_TYPE = 'application/zip'
 logger = logging.getLogger(__name__)
 
 
-def make_cmdi_record(template, collection_id, title, year, ids, fulltext_dict, metadata_dir, full_text_base_url):
+# def make_cmdi_record(template, collection_id, title, year, ids, fulltext_dict, metadata_dir, full_text_base_url):
+def make_cmdi_record(template, collection_id, title, year, annotation_urls, metadata_dir, files):
     cmdi_file = deepcopy(template)
 
     # Metadata headers
@@ -28,16 +29,17 @@ def make_cmdi_record(template, collection_id, title, year, ids, fulltext_dict, m
     if len(resource_proxies_list) != 1:
         logger.error("Expecting exactly one components root element")
     else:
-        insert_resource_proxies(resource_proxies_list[0], collection_id, ids, fulltext_dict, full_text_base_url)
+        insert_resource_proxies(resource_proxies_list[0], collection_id, annotation_urls)
 
     # Component section
     components_root = xpath(cmdi_file, '/cmd:CMD/cmd:Components/cmdp:TextResource')
     if len(components_root) != 1:
         logger.error("Expecting exactly one components root element")
-    else:
-        # load EDM metadata records
-        edm_records = load_emd_records(ids, metadata_dir)
-        insert_component_content(components_root[0], title, year, edm_records)
+    # else:
+        # TODO: load EDM metadata records
+        # edm_records = load_emd_records(ids, metadata_dir)
+        # TODO: insert component content
+        # insert_component_content(components_root[0], title, year, edm_records)
 
     return cmdi_file
 
@@ -70,13 +72,14 @@ def set_metadata_headers(doc):
         collection_name_header[0].text = COLLECTION_DISPLAY_NAME
 
 
-def insert_resource_proxies(resource_proxies_list, collection_id, ids, fulltext_dict, full_text_base_url):
+def insert_resource_proxies(resource_proxies_list, collection_id, annotation_urls):
     # dump URL
     insert_resource_proxy(resource_proxies_list, DUMP_PROXY_ID, "Resource",
                           make_dump_ref(collection_id), DUMP_MEDIA_TYPE)
-    for identifier in ids:
-        ref = f"{full_text_base_url}{fulltext_dict[identifier]}"
-        insert_resource_proxy(resource_proxies_list, xml_id(identifier), "Resource", ref)
+    index = 1
+    for ref in annotation_urls:
+        index += 1
+        insert_resource_proxy(resource_proxies_list, xml_id(f"{collection_id}_{index}"), "Resource", ref)
 
 
 def insert_resource_proxy(parent, proxy_id, resource_type, ref, media_type=None):
