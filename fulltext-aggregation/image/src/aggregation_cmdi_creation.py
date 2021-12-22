@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 # def make_cmdi_record(template, collection_id, title, year, ids, fulltext_dict, metadata_dir, full_text_base_url):
-def make_cmdi_record(template, collection_id, title, year, annotation_urls, metadata_dir, files):
+def make_cmdi_record(template, collection_id, title, year, records, metadata_dir):
     cmdi_file = deepcopy(template)
 
     # Metadata headers
@@ -29,7 +29,7 @@ def make_cmdi_record(template, collection_id, title, year, annotation_urls, meta
     if len(resource_proxies_list) != 1:
         logger.error("Expecting exactly one components root element")
     else:
-        insert_resource_proxies(resource_proxies_list[0], collection_id, annotation_urls)
+        insert_resource_proxies(resource_proxies_list[0], collection_id, records)
 
     # Component section
     components_root = xpath(cmdi_file, '/cmd:CMD/cmd:Components/cmdp:TextResource')
@@ -72,14 +72,17 @@ def set_metadata_headers(doc):
         collection_name_header[0].text = COLLECTION_DISPLAY_NAME
 
 
-def insert_resource_proxies(resource_proxies_list, collection_id, annotation_urls):
+def insert_resource_proxies(resource_proxies_list, collection_id, records):
     # dump URL
     insert_resource_proxy(resource_proxies_list, DUMP_PROXY_ID, "Resource",
                           make_dump_ref(collection_id), DUMP_MEDIA_TYPE)
-    index = 1
-    for ref in annotation_urls:
-        index += 1
-        insert_resource_proxy(resource_proxies_list, xml_id(f"{collection_id}_{index}"), "Resource", ref)
+    # 'records' is a map identifer -> {file, annotation_refs[]}
+    for identifier in records:
+        index = 1
+        for ref in records[identifier].get('annotation_refs', None):
+            if ref is not None:
+                index += 1
+                insert_resource_proxy(resource_proxies_list, xml_id(f"{identifier}_{index}"), "Resource", ref)
 
 
 def insert_resource_proxy(parent, proxy_id, resource_type, ref, media_type=None):

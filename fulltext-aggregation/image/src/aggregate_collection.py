@@ -161,29 +161,17 @@ def generate_cmdi_records(collection_id, index, metadata_dir, output_dir):
     for title in index:
         years = index[title]
         for year in years:
-            # for each year there is a dict of identifier -> file
-            records = years[year].values()
-            files = glom(records, ['file'])
-            annotation_url_lists = glom(records, ['annotation_refs'])
+            # for each year there is a dict of identifier -> {file, annotation_ref[]}
+            records = years[year]
+            file_name = f"{output_dir}/{filename_safe(title + '_' + year)}.cmdi"
 
-            if annotation_url_lists is None:
-                logger.warning(f'No annotation references in index for "{title}"/{year}')
-            else:
-                annotation_urls = flatten(annotation_url_lists)
-                if len(files) == 0:
-                    logger.warning(f"No files available for '{title}'/{year} - skipping CMDI creation")
-                else:
-                    if len(annotation_urls) == 0:
-                        logger.warning(f"No full text records available for '{title}'/{year} - skipping CMDI creation")
-                    else:
-                        logger.debug(f"Found {len(annotation_urls)} fulltext annotations for '{title}'/{year} ")
-                        file_name = f"{output_dir}/{filename_safe(title + '_' + year)}.cmdi"
-                        logger.debug(f"Generating metadata file {file_name}")
-                        cmdi_file = make_cmdi_record(template, collection_id, title, year, annotation_urls,
-                                                     metadata_dir, files)
-                        etree.indent(cmdi_file, space="  ", level=0)
-                        etree.cleanup_namespaces(cmdi_file, top_nsmap=ALL_NAMESPACES)
-                        cmdi_file.write(file_name, encoding='utf-8', pretty_print=True, xml_declaration=True)
+            logger.debug(f"Generating metadata file {file_name}")
+            cmdi_file = make_cmdi_record(template, collection_id, title, year, records, metadata_dir)
+
+            # wrap up and write to file
+            etree.indent(cmdi_file, space="  ", level=0)
+            etree.cleanup_namespaces(cmdi_file, top_nsmap=ALL_NAMESPACES)
+            cmdi_file.write(file_name, encoding='utf-8', pretty_print=True, xml_declaration=True)
 
             count += 1
             last_log = log_progress(logger, total, count, last_log,
@@ -234,9 +222,16 @@ def extract_fulltext_record_id(file_path):
 
 def test_run():
     collection_id = '9200396'
-    result = aggregate(collection_id,
-                       metadata_dir=f"./test-input/{collection_id}",
-                       output_dir=f"./test-output/{collection_id}")
+    # result = aggregate(collection_id,
+    #                    metadata_dir=f"./test-input/{collection_id}",
+    #                    output_dir=f"./test-output/{collection_id}")
+
+    with open(f"./test-input/{collection_id}/index.json", 'r') as index_file:
+        index = json.load(index_file)
+
+    generate_cmdi_records(collection_id, index,
+                          metadata_dir=f"./test-input/{collection_id}",
+                          output_dir=f"./test-output/{collection_id}")
     # pprint.pprint(result)
 
 
