@@ -17,6 +17,7 @@ services:
       - METADATA_PATH=/input/metadata
       - FULLTEXT_PATH=/input/fulltext
       - OUTPUT_DIR=/output
+      - IIIF_API_URL=https://iiif.europeana.eu
     volumes:
       - "${LOCAL_OUTPUT_DIR:-./output}:/output"
       - input-storage:/input

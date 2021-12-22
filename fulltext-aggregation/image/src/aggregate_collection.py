@@ -4,6 +4,7 @@ import os
 import pprint
 
 from lxml import etree
+from glom import glom, flatten, PathAccessError
 
 from aggregation_cmdi_creation import make_cmdi_record
 from common import log_progress
@@ -22,7 +23,7 @@ IIIF_API_URL = get_optional_env_var('IIIF_API_URL', 'https://iiif.europeana.eu')
 
 def aggregate(collection_id, metadata_dir, output_dir):
     logging.basicConfig()
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
     # 'index' metadata records based on properties
     logger.info("Making index for metadata")
@@ -77,7 +78,7 @@ def make_md_index(metadata_dir):
             count += 1
             last_log = log_progress(logger, total, count, last_log,
                                     category="Reading metadata files",
-                                    interval_pct=10)
+                                    interval_pct=5)
     return md_index
 
 
@@ -86,22 +87,22 @@ def retrieve_annotation_refs(iiif_manifest_url):
         logger.warning(f"Skipping URL, not a IIIF service URL: {iiif_manifest_url}")
         return []
 
-    logger.debug(f"Getting manifest for from {iiif_manifest_url}")
+    logger.debug(f"Getting manifest from {iiif_manifest_url}")
     manifest = get_json_from_http(iiif_manifest_url)
 
     if manifest is None:
         logger.warning(f"No valid response from manifest request at {iiif_manifest_url}")
     else:
         # collection annotation URLs for record
-        annotation_urls = []
-        # TODO: Use GLOM for this?
-        for sequence in manifest.get("sequences", []):
-            for canvas in sequence.get("canvases", []):
-                for otherContent in canvas.get("otherContent", []):
-                    if isinstance(otherContent, str) and otherContent.startswith(IIIF_API_URL):
-                        annotation_urls += [otherContent]
+        canvases = glom(manifest, ('sequences', ['canvases']), skip_exc=PathAccessError)
+        if canvases is not None:
+            annotation_urls = glom(flatten(canvases), ['otherContent'], skip_exc=PathAccessError)
+            if annotation_urls is not None:
+                annotation_urls_flat = flatten(annotation_urls)
+                logger.debug(f"{len(annotation_urls_flat)} annotation references found")
+                return annotation_urls_flat
 
-        return annotation_urls
+    return []
 
 
 def add_to_index(index, identifier, titles, years, filename, annotation_refs):
@@ -113,7 +114,10 @@ def add_to_index(index, identifier, titles, years, filename, annotation_refs):
         for year in years:
             if year not in index[title]:
                 index[title][year] = {}
-            index[title][year][identifier] = filename
+            index[title][year][identifier] = {
+                'file': filename,
+                'annotation_refs': annotation_refs
+            }
 
 
 def save_index(index, index_filename):
