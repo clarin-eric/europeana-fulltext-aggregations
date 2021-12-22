@@ -100,14 +100,40 @@ def retrieve_annotation_refs(iiif_manifest_url):
             if annotation_urls is not None:
                 annotation_urls_flat = flatten(annotation_urls)
                 logger.debug(f"{len(annotation_urls_flat)} annotation references found")
-                return annotation_urls_flat
+                return retrieve_fulltext_refs(annotation_urls_flat)
 
     return []
 
 
-def add_to_index(index, identifier, titles, years, filename, annotation_refs):
-    # TODO: make object with filename + annotation refs array
+def retrieve_fulltext_refs(annotation_urls):
+    refs = []
+    for annotation_url in annotation_urls:
+        annotations = get_json_from_http(annotation_url)
+        if annotations is None:
+            logger.error(f"No content for annotations at {annotation_url}")
+        else:
+            fulltext_ref = get_fulltext_ref_from_annotations(annotations)
+            if fulltext_ref is None:
+                logger.error(f"No full text content in annotations data at {annotation_url}")
+            else:
+                refs += [fulltext_ref]
 
+    return refs
+
+
+def get_fulltext_ref_from_annotations(annotations):
+    resources = annotations.get('resources', None)
+    if resources is None:
+        logger.error(f"No resources in annotations")
+    else:
+        for resource in resources:
+            if resource['dcType'] == 'Page':
+                return glom(resource, 'resource.@id', skip_exc=PathAccessError)
+
+    return None
+
+
+def add_to_index(index, identifier, titles, years, filename, annotation_refs):
     for title in titles:
         if title not in index:
             index[title] = {}
