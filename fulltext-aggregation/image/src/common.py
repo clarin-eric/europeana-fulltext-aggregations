@@ -134,9 +134,12 @@ def id_to_fulltext_file(identifier):
     return f"{id_to_filename(identifier)}.xml"
 
 
-def get_json_from_http(url):
+def get_json_from_http(url, session=None):
     logger.debug(f"Making request: {url}")
-    response = requests.get(url).text
+    if session is None:
+        response = requests.get(url).text
+    else:
+        response = session.get(url).text
     logger.debug(f"API response: {url}")
     try:
         return json.loads(response)

@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-import pprint
+import requests
 
 from lxml import etree
 from glom import glom, flatten, PathAccessError
@@ -50,45 +50,50 @@ def make_md_index(metadata_dir):
     total = len(files)
     count = 0
     last_log = 0
-    for filename in files:
-        if filename.endswith(".xml"):
-            file_path = f"{metadata_dir}/{filename}"
-            logger.debug(f"Processing metadata file {file_path}")
-            try:
-                doc = etree.parse(file_path)
-                identifiers = xpath_text_values(doc, '/rdf:RDF/ore:Proxy/dc:identifier')
-                if len(identifiers) == 0:
-                    logger.error(f"No identifier in {file_path}")
-                else:
-                    identifier = normalize_identifier(identifiers[0])
-                    titles = [normalize_title(title)
-                              for title in xpath_text_values(doc, '/rdf:RDF/ore:Proxy/dc:title')]
-                    years = [date_to_year(date)
-                             for date in xpath_text_values(doc, '/rdf:RDF/ore:Proxy/dcterms:issued')]
+    with requests.Session() as session:
+        for filename in files:
+            if filename.endswith(".xml"):
+                file_path = f"{metadata_dir}/{filename}"
+                logger.debug(f"Processing metadata file {file_path}")
+                index_from_file(file_path, filename, md_index, session)
 
-                    annotation_refs = []
-                    iiif_referencees = xpath(doc, '/rdf:RDF/edm:WebResource/dcterms:isReferencedBy/@rdf:resource')
-                    for manifest_url in list(set(iiif_referencees)):
-                        annotation_refs += retrieve_annotation_refs(manifest_url)
-
-                    add_to_index(md_index, identifier, titles, years, filename, annotation_refs)
-            except etree.Error as err:
-                logger.error(f"Error processing XML document: {err=}")
-
-            count += 1
-            last_log = log_progress(logger, total, count, last_log,
-                                    category="Reading metadata files",
-                                    interval_pct=5)
+                count += 1
+                last_log = log_progress(logger, total, count, last_log,
+                                        category="Reading metadata files",
+                                        interval_pct=5)
     return md_index
 
 
-def retrieve_annotation_refs(iiif_manifest_url):
+def index_from_file(file_path, filename, md_index, session):
+    try:
+        doc = etree.parse(file_path)
+        identifiers = xpath_text_values(doc, '/rdf:RDF/ore:Proxy/dc:identifier')
+        if len(identifiers) == 0:
+            logger.error(f"No identifier in {file_path}")
+        else:
+            identifier = normalize_identifier(identifiers[0])
+            titles = [normalize_title(title)
+                      for title in xpath_text_values(doc, '/rdf:RDF/ore:Proxy/dc:title')]
+            years = [date_to_year(date)
+                     for date in xpath_text_values(doc, '/rdf:RDF/ore:Proxy/dcterms:issued')]
+
+            annotation_refs = []
+            iiif_referencees = xpath(doc, '/rdf:RDF/edm:WebResource/dcterms:isReferencedBy/@rdf:resource')
+            for manifest_url in list(set(iiif_referencees)):
+                annotation_refs += retrieve_annotation_refs(manifest_url, session)
+
+            add_to_index(md_index, identifier, titles, years, filename, annotation_refs)
+    except etree.Error as err:
+        logger.error(f"Error processing XML document: {err=}")
+
+
+def retrieve_annotation_refs(iiif_manifest_url, session):
     if not iiif_manifest_url.startswith(IIIF_API_URL):
         logger.warning(f"Skipping URL, not a IIIF service URL: {iiif_manifest_url}")
         return []
 
     logger.debug(f"Getting manifest from {iiif_manifest_url}")
-    manifest = get_json_from_http(iiif_manifest_url)
+    manifest = get_json_from_http(iiif_manifest_url, session)
 
     if manifest is None:
         logger.warning(f"No valid response from manifest request at {iiif_manifest_url}")
@@ -100,15 +105,15 @@ def retrieve_annotation_refs(iiif_manifest_url):
             if annotation_urls is not None:
                 annotation_urls_flat = flatten(annotation_urls)
                 logger.debug(f"{len(annotation_urls_flat)} annotation references found")
-                return retrieve_fulltext_refs(annotation_urls_flat)
+                return retrieve_fulltext_refs(annotation_urls_flat, session)
 
     return []
 
 
-def retrieve_fulltext_refs(annotation_urls):
+def retrieve_fulltext_refs(annotation_urls, session=None):
     refs = []
     for annotation_url in annotation_urls:
-        annotations = get_json_from_http(annotation_url)
+        annotations = get_json_from_http(annotation_url, session)
         if annotations is None:
             logger.error(f"No content for annotations at {annotation_url}")
         else:
