@@ -27,11 +27,24 @@ main() {
   case "${COMMAND}" in
 
     'retrieve')
-      "${SCRIPT_DIR}/retrieve.sh" "${ARGUMENTS}"
+      COLLECTION_ID="${ARGUMENTS[0]}"
+
+      if ! [ "${COLLECTION_ID}" ]; then
+        echo "ERROR - No collection identifier provided"
+        exit 1
+      fi
+
+      "${SCRIPT_DIR}/retrieve.sh" "${COLLECTION_ID}"
       ;;
 
     'aggregate')
       COLLECTION_ID="${ARGUMENTS[0]}"
+
+      if ! [ "${COLLECTION_ID}" ]; then
+        echo "ERROR - No collection identifier provided"
+        exit 1
+      fi
+
       INPUT="${INPUT_DIR}/${COLLECTION_ID}"
       OUTPUT="${OUTPUT_DIR}/${COLLECTION_ID}"
       mkdir -p "${OUTPUT}"
