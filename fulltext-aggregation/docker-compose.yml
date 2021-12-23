@@ -18,6 +18,7 @@ services:
       - FULLTEXT_PATH=/input/fulltext
       - OUTPUT_DIR=/output
       - IIIF_API_URL=https://iiif.europeana.eu
+      - API_RETRIEVAL_THREAD_POOL_SIZE=10
     volumes:
       - "${LOCAL_OUTPUT_DIR:-./output}:/output"
       - input-storage:/input
