@@ -24,10 +24,11 @@ IIIF_API_URL = get_optional_env_var('IIIF_API_URL', 'https://iiif.europeana.eu')
 
 
 def aggregate(collection_id, metadata_dir, output_dir):
-    start_time = time.time_ns()
+    start_time = time.time()
 
     logging.basicConfig(level=logging.DEBUG)
     logger.setLevel(logging.INFO)
+    logger.info(f"Start time: {time.strftime('%c', time.localtime(start_time))}")
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -43,9 +44,9 @@ def aggregate(collection_id, metadata_dir, output_dir):
     logger.info(f"Creating CMDI record for items in index in {output_dir}")
     generate_cmdi_records(collection_id, index, metadata_dir, output_dir)
 
-    end_time = time.time_ns()
+    end_time = time.time()
 
-    logger.info(f"Aggregation of {collection_id} completed in {end_time - start_time} seconds")
+    logger.info(f"Aggregation of {collection_id} completed in {end_time - start_time:,.2f} seconds")
     return index
 
 
