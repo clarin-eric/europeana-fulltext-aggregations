@@ -88,6 +88,11 @@ def insert_resource_proxies(resource_proxies_list, collection_id, records):
     # dump URL
     insert_resource_proxy(resource_proxies_list, DUMP_PROXY_ID, "Resource",
                           make_dump_ref(collection_id), DUMP_MEDIA_TYPE)
+
+    # TODO: ALTO dump
+    # TODO: landing page (configured URL)
+
+    # full text resources from IIIF API
     # 'records' is a map identifer -> {file, manifest_urls[]}
     with requests.Session() as session:
         for identifier in records:
@@ -139,6 +144,7 @@ def insert_component_content(components_root, title, year, edm_records):
     insert_licences(components_root, edm_records)
     # Subresources
     insert_subresource_info(components_root, edm_records)
+    # TODO: subresource info for dumps
     # Metadata information
     insert_metadata_info(components_root)
 

@@ -6,20 +6,16 @@ bash build.sh #only before first run
 
 cp .env-template .env
 vi .env # or editor of choice :)
-# configure Europeana API key and optionally a custom output directory
+# configure a local output directory and other (optional) settings
 
-COLLECTION_ID=...... 
+COLLECTION_ID=...... # for instance '9200396'
 
 # retrieve metadata dump from server
 ./run.sh retrieve "${COLLECTION_ID}"
 # run aggregation scripts
 ./run.sh aggregate "${COLLECTION_ID}"
+# clean retrieved resources (does not touch the output)
+./run.sh clean
 ```
 
 Alternatively you can run the Python script in `image/src` locally.
-Make sure to set the following environment variables:
-- `SEARCH_API_URL` - base URL of the Europeana Search API
-- `SEARCH_API_KEY` - personal key that gives access to the Europeana Search API
-- `IIIF_API_URL` - base URL of the Europeana IIIF service
-- `OUTPUT_DIR` - target directory for retrieved content
-- `RECORD_RETRIEVAL_LIMIT` - maximum number of records to retrieve; set to -1 for no limit
