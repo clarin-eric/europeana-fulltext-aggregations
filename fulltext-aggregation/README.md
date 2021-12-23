@@ -10,11 +10,11 @@ vi .env # or editor of choice :)
 
 COLLECTION_ID=...... # for instance '9200396'
 
-# retrieve metadata dump from server
-./run.sh retrieve "${COLLECTION_ID}"
-# run aggregation scripts
-./run.sh aggregate "${COLLECTION_ID}"
-# clean retrieved resources (does not touch the output)
+`# retrieve metadata dump from server` && \
+./run.sh retrieve "${COLLECTION_ID}" && \
+`# run aggregation scripts` && \ 
+./run.sh aggregate "${COLLECTION_ID}" && \
+`# clean retrieved resources (does not touch the output)` && \
 ./run.sh clean
 ```
 
