@@ -20,7 +20,7 @@ main() {
   METADATA_DUMP_URL="ftp://download.europeana.eu/dataset/XML/${COLLECTION_ID}.zip"
   METADATA_DUMP_FILE="${DOWNLOAD_DIR}/${COLLECTION_ID}_metadata.zip"
 
-  mkdir -p "${DOWNLOAD_DIR}" "${COLLECTION_TARGET_DIR}"
+  mkdir -p "${DOWNLOAD_DIR}"
   chmod -R og+rw "${DOWNLOAD_DIR}"
 
   echo "$(date) - Starting metadata download from ${METADATA_DUMP_URL} to ${METADATA_DUMP_FILE}"
@@ -54,7 +54,7 @@ download_and_unpack() {
     fi
 
     echo "$(date) - Decompressing ${FILE} in ${DIR}"
-    cd "${DIR}"
+    mkdir -p "${DIR}" && cd "${DIR}"
     if 7z x "${FILE}"; then
       # Move all files in target directory 'root'
       find "${DIR}" -mindepth 2 -type f -exec "${MV_COMMAND:-mv}" -t "${DIR}" -i '{}' +
