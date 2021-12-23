@@ -7,7 +7,7 @@ import time
 from lxml import etree
 from multiprocessing import Pool
 
-from aggregation_cmdi_creation import make_cmdi_record
+from aggregation_cmdi_creation import make_cmdi_record, make_cmdi_template
 from common import log_progress
 from common import xpath, xpath_text_values
 from common import normalize_title, normalize_identifier, date_to_year, filename_safe
@@ -142,8 +142,7 @@ def save_index(index, index_filename):
 
 def generate_cmdi_records(collection_id, index, metadata_dir, output_dir):
     os.makedirs(output_dir, exist_ok=True)
-    script_path = os.path.dirname(os.path.realpath(__file__))
-    template = etree.parse(f"{script_path}/fulltextresource-template.xml")
+    template = make_cmdi_template()
     total = sum([len(index[title]) for title in index])
     count = 0
     last_log = 0

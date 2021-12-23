@@ -1,12 +1,15 @@
 import logging
 
 from glom import glom, flatten, PathAccessError
+from multiprocessing import Pool
+
 from common import get_json_from_http
 from common import get_optional_env_var
 
 logger = logging.getLogger(__name__)
 
 IIIF_API_URL = get_optional_env_var('IIIF_API_URL', 'https://iiif.europeana.eu')
+THREAD_POOL_SIZE = int(get_optional_env_var('API_RETRIEVAL_THREAD_POOL_SIZE', '10'))
 
 
 def retrieve_annotation_refs(iiif_manifest_url, session):
@@ -20,32 +23,38 @@ def retrieve_annotation_refs(iiif_manifest_url, session):
     if manifest is None:
         logger.warning(f"No valid response from manifest request at {iiif_manifest_url}")
     else:
-        # collection annotation URLs for record
-        canvases = glom(manifest, ('sequences', ['canvases']), skip_exc=PathAccessError)
-        if canvases is not None:
-            annotation_urls = glom(flatten(canvases), ['otherContent'], skip_exc=PathAccessError)
-            if annotation_urls is not None:
-                annotation_urls_flat = flatten(annotation_urls)
-                logger.debug(f"{len(annotation_urls_flat)} annotation references found")
-                return retrieve_fulltext_refs(annotation_urls_flat, session)
+        with Pool(THREAD_POOL_SIZE) as p:
+            # collection annotation URLs for record
+            canvases = glom(manifest, ('sequences', ['canvases']), skip_exc=PathAccessError)
+            if canvases is not None:
+                annotation_urls = glom(flatten(canvases), ['otherContent'], skip_exc=PathAccessError)
+                if annotation_urls is not None:
+                    annotation_urls_flat = flatten(annotation_urls)
+                    logger.debug(f"{len(annotation_urls_flat)} annotation references found")
 
+                    retrieval_context = RetrievalContext(session)
+                    # retrieval of fulltext URLs in thread pool
+                    fulltext_urls = p.map(retrieval_context.retrieve_fulltext_refs_from_annotation, annotation_urls_flat)
+                    return [url for url in fulltext_urls if fulltext_urls is not None]
     return []
 
 
-def retrieve_fulltext_refs(annotation_urls, session=None):
-    refs = []
-    for annotation_url in annotation_urls:
-        annotations = get_json_from_http(annotation_url, session)
+class RetrievalContext:
+
+    def __init__(self, session):
+        self.session = session
+
+    def retrieve_fulltext_refs_from_annotation(self, annotation_url):
+        refs = []
+        annotations = get_json_from_http(annotation_url, self.session)
         if annotations is None:
             logger.error(f"No content for annotations at {annotation_url}")
         else:
             fulltext_ref = get_fulltext_ref_from_annotations(annotations)
             if fulltext_ref is None:
                 logger.warning(f"No full text content in annotations data at {annotation_url}")
-            else:
-                refs += [fulltext_ref]
 
-    return refs
+            return fulltext_ref
 
 
 def get_fulltext_ref_from_annotations(annotations):

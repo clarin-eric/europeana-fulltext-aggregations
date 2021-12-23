@@ -21,7 +21,11 @@ DUMP_MEDIA_TYPE = 'application/zip'
 logger = logging.getLogger(__name__)
 
 
-# def make_cmdi_record(template, collection_id, title, year, ids, fulltext_dict, metadata_dir, full_text_base_url):
+def make_cmdi_template():
+    script_path = os.path.dirname(os.path.realpath(__file__))
+    return etree.parse(f"{script_path}/fulltextresource-template.xml")
+
+
 def make_cmdi_record(template, collection_id, title, year, records, metadata_dir):
     cmdi_file = deepcopy(template)
 
@@ -42,7 +46,7 @@ def make_cmdi_record(template, collection_id, title, year, records, metadata_dir
     else:
         # load EDM metadata records
         edm_records = load_emd_records(records, metadata_dir)
-        # TODO: insert component content
+        # insert component content
         insert_component_content(components_root[0], title, year, edm_records)
 
     return cmdi_file
