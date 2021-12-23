@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import requests
+import time
 
 from lxml import etree
 from glom import glom, flatten, PathAccessError
@@ -23,6 +24,8 @@ IIIF_API_URL = get_optional_env_var('IIIF_API_URL', 'https://iiif.europeana.eu')
 
 
 def aggregate(collection_id, metadata_dir, output_dir):
+    start_time = time.time_ns()
+
     logging.basicConfig(level=logging.DEBUG)
     logger.setLevel(logging.INFO)
 
@@ -40,7 +43,9 @@ def aggregate(collection_id, metadata_dir, output_dir):
     logger.info(f"Creating CMDI record for items in index in {output_dir}")
     generate_cmdi_records(collection_id, index, metadata_dir, output_dir)
 
-    logger.info("Done")
+    end_time = time.time_ns()
+
+    logger.info(f"Aggregation of {collection_id} completed in {end_time - start_time} seconds")
     return index
 
 
@@ -53,7 +58,17 @@ def make_md_index(metadata_dir):
     with requests.Session() as session:
         indexer = FileIndexer(md_index, metadata_dir, session, total)
         with Pool(int(THREAD_POOL_SIZE)) as p:
-            p.map(indexer.index_from_file, files)
+            data = p.map(indexer.index_from_file, files)
+
+        for item in data:
+            # non-matching files yield no response
+            if item is not None:
+                add_to_index(md_index,
+                             identifier=item['identifier'],
+                             titles=item['titles'],
+                             years=item['years'],
+                             filename=item['filename'],
+                             annotation_refs=item['annotation_refs'])
 
     return md_index
 
@@ -72,7 +87,7 @@ class FileIndexer:
         if filename.endswith(".xml"):
             file_path = f"{self.metadata_dir}/{filename}"
             logging.debug(f"Processing metadata file {file_path}")
-            add_file_to_index(file_path, filename, self.md_index, self.session)
+            return add_file_to_index(file_path, filename, self.md_index, self.session)
 
         self.count += 1
         self.last_log = log_progress(None, self.total, self.count, self.last_log,
@@ -98,7 +113,14 @@ def add_file_to_index(file_path, filename, md_index, session):
             for manifest_url in list(set(iiif_referencees)):
                 annotation_refs += retrieve_annotation_refs(manifest_url, session)
 
-            add_to_index(md_index, identifier, titles, years, filename, annotation_refs)
+            return {
+                       'identifier': identifier,
+                       'titles': titles,
+                       'years': years,
+                       'filename': filename,
+                        'annotation_refs': annotation_refs
+            }
+
     except etree.Error as err:
         logger.error(f"Error processing XML document: {err=}")
 
