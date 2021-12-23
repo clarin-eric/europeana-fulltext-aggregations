@@ -1,6 +1,10 @@
 import logging
 import os
 
+import requests
+
+import retrieve_iiif_annotations
+
 from copy import deepcopy
 from lxml import etree
 from datetime import date
@@ -80,13 +84,28 @@ def insert_resource_proxies(resource_proxies_list, collection_id, records):
     # dump URL
     insert_resource_proxy(resource_proxies_list, DUMP_PROXY_ID, "Resource",
                           make_dump_ref(collection_id), DUMP_MEDIA_TYPE)
-    # 'records' is a map identifer -> {file, annotation_refs[]}
-    for identifier in records:
-        index = 0
-        for ref in records[identifier].get('annotation_refs', None):
-            if ref is not None:
-                index += 1
-                insert_resource_proxy(resource_proxies_list, xml_id(f"{identifier}_{index}"), "Resource", ref)
+    # 'records' is a map identifer -> {file, manifest_urls[]}
+    with requests.Session() as session:
+        for identifier in records:
+            index = 0
+            manifest_urls = records[identifier].get('manifest_urls', None)
+            if manifest_urls is None:
+                logger.warning(f"No manifest URLs specified for record {identifier}")
+                # TODO: Exception
+            else:
+                refs = retrieve_iiif_annotation_refs(manifest_urls, session)
+                # TODO: Exception if len(refs) == 0
+                for ref in refs:
+                    if ref is not None:
+                        index += 1
+                        insert_resource_proxy(resource_proxies_list, xml_id(f"{identifier}_{index}"), "Resource", ref)
+
+
+def retrieve_iiif_annotation_refs(manifest_urls, session):
+    refs = []
+    for url in manifest_urls:
+        refs += retrieve_iiif_annotations.retrieve_annotation_refs(url, session)
+    return refs
 
 
 def insert_resource_proxy(parent, proxy_id, resource_type, ref, media_type=None):

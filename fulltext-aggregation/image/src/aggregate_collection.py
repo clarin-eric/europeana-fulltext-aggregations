@@ -5,21 +5,19 @@ import requests
 import time
 
 from lxml import etree
-from glom import glom, flatten, PathAccessError
 from multiprocessing import Pool
 
 from aggregation_cmdi_creation import make_cmdi_record
 from common import log_progress
 from common import xpath, xpath_text_values
 from common import normalize_title, normalize_identifier, date_to_year, filename_safe
-from common import get_json_from_http
 from common import get_optional_env_var
 
 from common import ALL_NAMESPACES
 
 logger = logging.getLogger(__name__)
 
-THREAD_POOL_SIZE = int(get_optional_env_var('API_RETRIEVAL_THREAD_POOL_SIZE', '10'))
+THREAD_POOL_SIZE = int(get_optional_env_var('FILE_PROCESSING_THREAD_POOL_SIZE', '10'))
 IIIF_API_URL = get_optional_env_var('IIIF_API_URL', 'https://iiif.europeana.eu')
 
 
@@ -57,9 +55,9 @@ def make_md_index(metadata_dir):
     total = len(files)
 
     with requests.Session() as session:
-        indexer = FileIndexer(md_index, metadata_dir, session, total)
+        indexer = FileProcessor(md_index, metadata_dir, session, total)
         with Pool(int(THREAD_POOL_SIZE)) as p:
-            data = p.map(indexer.index_from_file, files)
+            data = p.map(indexer.process, files)
 
         for item in data:
             # non-matching files yield no response
@@ -69,12 +67,12 @@ def make_md_index(metadata_dir):
                              titles=item['titles'],
                              years=item['years'],
                              filename=item['filename'],
-                             annotation_refs=item['annotation_refs'])
+                             manifest_urls=item['manifest_urls'])
 
     return md_index
 
 
-class FileIndexer:
+class FileProcessor:
 
     def __init__(self, md_index, metadata_dir, session, total):
         self.md_index = md_index
@@ -84,19 +82,19 @@ class FileIndexer:
         self.count = 0
         self.last_log = 0
 
-    def index_from_file(self, filename):
+    def process(self, filename):
         if filename.endswith(".xml"):
             file_path = f"{self.metadata_dir}/{filename}"
             logging.debug(f"Processing metadata file {file_path}")
-            return add_file_to_index(file_path, filename, self.md_index, self.session)
+            return process_file(file_path, filename)
 
         self.count += 1
         self.last_log = log_progress(None, self.total, self.count, self.last_log,
-                                category="Reading metadata files",
-                                interval=1)
+                                     category="Reading metadata files",
+                                     interval=1)
 
 
-def add_file_to_index(file_path, filename, md_index, session):
+def process_file(file_path, filename):
     try:
         doc = etree.parse(file_path)
         identifiers = xpath_text_values(doc, '/rdf:RDF/ore:Proxy/dc:identifier')
@@ -109,73 +107,22 @@ def add_file_to_index(file_path, filename, md_index, session):
             years = [date_to_year(date)
                      for date in xpath_text_values(doc, '/rdf:RDF/ore:Proxy/dcterms:issued')]
 
-            annotation_refs = []
             iiif_referencees = xpath(doc, '/rdf:RDF/edm:WebResource/dcterms:isReferencedBy/@rdf:resource')
-            for manifest_url in list(set(iiif_referencees)):
-                annotation_refs += retrieve_annotation_refs(manifest_url, session)
+            manifest_urls = list(set(iiif_referencees))
 
             return {
-                       'identifier': identifier,
-                       'titles': titles,
-                       'years': years,
-                       'filename': filename,
-                        'annotation_refs': annotation_refs
+                'identifier': identifier,
+                'titles': titles,
+                'years': years,
+                'filename': filename,
+                'manifest_urls': manifest_urls
             }
 
     except etree.Error as err:
         logger.error(f"Error processing XML document: {err=}")
 
 
-def retrieve_annotation_refs(iiif_manifest_url, session):
-    if not iiif_manifest_url.startswith(IIIF_API_URL):
-        logger.warning(f"Skipping URL, not a IIIF service URL: {iiif_manifest_url}")
-        return []
-
-    logger.debug(f"Getting manifest from {iiif_manifest_url}")
-    manifest = get_json_from_http(iiif_manifest_url, session)
-
-    if manifest is None:
-        logger.warning(f"No valid response from manifest request at {iiif_manifest_url}")
-    else:
-        # collection annotation URLs for record
-        canvases = glom(manifest, ('sequences', ['canvases']), skip_exc=PathAccessError)
-        if canvases is not None:
-            annotation_urls = glom(flatten(canvases), ['otherContent'], skip_exc=PathAccessError)
-            if annotation_urls is not None:
-                annotation_urls_flat = flatten(annotation_urls)
-                logger.debug(f"{len(annotation_urls_flat)} annotation references found")
-                return retrieve_fulltext_refs(annotation_urls_flat, session)
-
-    return []
-
-
-def retrieve_fulltext_refs(annotation_urls, session=None):
-    refs = []
-    for annotation_url in annotation_urls:
-        annotations = get_json_from_http(annotation_url, session)
-        if annotations is None:
-            logger.error(f"No content for annotations at {annotation_url}")
-        else:
-            fulltext_ref = get_fulltext_ref_from_annotations(annotations)
-            if fulltext_ref is None:
-                logger.warning(f"No full text content in annotations data at {annotation_url}")
-            else:
-                refs += [fulltext_ref]
-
-    return refs
-
-
-def get_fulltext_ref_from_annotations(annotations):
-    resources = annotations.get('resources', None)
-    if resources is not None:
-        for resource in resources:
-            if resource['dcType'] == 'Page':
-                return glom(resource, 'resource.@id', skip_exc=PathAccessError)
-
-    return None
-
-
-def add_to_index(index, identifier, titles, years, filename, annotation_refs):
+def add_to_index(index, identifier, titles, years, filename, manifest_urls):
     for title in titles:
         if title not in index:
             index[title] = {}
@@ -184,7 +131,7 @@ def add_to_index(index, identifier, titles, years, filename, annotation_refs):
                 index[title][year] = {}
             index[title][year][identifier] = {
                 'file': filename,
-                'annotation_refs': annotation_refs
+                'manifest_urls': manifest_urls
             }
 
 
