@@ -47,6 +47,12 @@ main() {
 
       INPUT="${INPUT_DIR}/${COLLECTION_ID}"
       OUTPUT="${OUTPUT_DIR}/${COLLECTION_ID}"
+
+      if ! [ -d "${INPUT}" ]; then
+        echo "ERROR - Input directory does not exist. Run $0 retrieve first!"
+        exit 1
+      fi
+
       mkdir -p "${OUTPUT}"
       (
         cd "${SCRIPT_DIR}/.." \
