@@ -23,7 +23,7 @@ IIIF_API_URL = get_optional_env_var('IIIF_API_URL', 'https://iiif.europeana.eu')
 
 
 def aggregate(collection_id, metadata_dir, output_dir):
-    logging.basicConfig()
+    logging.basicConfig(level=logging.DEBUG)
     logger.setLevel(logging.INFO)
 
     os.makedirs(output_dir, exist_ok=True)
@@ -71,13 +71,13 @@ class FileIndexer:
     def index_from_file(self, filename):
         if filename.endswith(".xml"):
             file_path = f"{self.metadata_dir}/{filename}"
-            logger.debug(f"Processing metadata file {file_path}")
+            logging.debug(f"Processing metadata file {file_path}")
             add_file_to_index(file_path, filename, self.md_index, self.session)
 
         self.count += 1
-        self.last_log = log_progress(logger, self.total, self.count, self.last_log,
+        self.last_log = log_progress(None, self.total, self.count, self.last_log,
                                 category="Reading metadata files",
-                                interval_pct=5)
+                                interval=1)
 
 
 def add_file_to_index(file_path, filename, md_index, session):
@@ -135,7 +135,7 @@ def retrieve_fulltext_refs(annotation_urls, session=None):
         else:
             fulltext_ref = get_fulltext_ref_from_annotations(annotations)
             if fulltext_ref is None:
-                logger.error(f"No full text content in annotations data at {annotation_url}")
+                logger.warning(f"No full text content in annotations data at {annotation_url}")
             else:
                 refs += [fulltext_ref]
 
@@ -144,9 +144,7 @@ def retrieve_fulltext_refs(annotation_urls, session=None):
 
 def get_fulltext_ref_from_annotations(annotations):
     resources = annotations.get('resources', None)
-    if resources is None:
-        logger.error(f"No resources in annotations")
-    else:
+    if resources is not None:
         for resource in resources:
             if resource['dcType'] == 'Page':
                 return glom(resource, 'resource.@id', skip_exc=PathAccessError)

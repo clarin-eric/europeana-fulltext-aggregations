@@ -156,7 +156,10 @@ def log_progress(logr, total, current, last_log, category=None, interval_pct=5, 
         interval = .01 * interval_pct * total
 
     if current >= last_log + interval:
-        logr.info(f"{category} - Progress: {current}/{total} ({current / total:2.0%})")
+        if logr is None:
+            logging.info(f"{category} - Progress: {current}/{total} ({current / total:2.0%})")
+        else:
+            logr.info(f"{category} - Progress: {current}/{total} ({current / total:2.0%})")
         return current
     else:
         return last_log
