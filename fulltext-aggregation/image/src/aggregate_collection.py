@@ -5,6 +5,7 @@ import requests
 
 from lxml import etree
 from glom import glom, flatten, PathAccessError
+from multiprocessing import Pool
 
 from aggregation_cmdi_creation import make_cmdi_record
 from common import log_progress
@@ -17,7 +18,7 @@ from common import ALL_NAMESPACES
 
 logger = logging.getLogger(__name__)
 
-
+THREAD_POOL_SIZE = int(get_optional_env_var('API_RETRIEVAL_THREAD_POOL_SIZE', '10'))
 IIIF_API_URL = get_optional_env_var('IIIF_API_URL', 'https://iiif.europeana.eu')
 
 
@@ -48,23 +49,38 @@ def make_md_index(metadata_dir):
     files = os.listdir(metadata_dir)
     logger.info(f"Reading metadata from {len(files)} files in {metadata_dir}")
     total = len(files)
-    count = 0
-    last_log = 0
-    with requests.Session() as session:
-        for filename in files:
-            if filename.endswith(".xml"):
-                file_path = f"{metadata_dir}/{filename}"
-                logger.debug(f"Processing metadata file {file_path}")
-                index_from_file(file_path, filename, md_index, session)
 
-                count += 1
-                last_log = log_progress(logger, total, count, last_log,
-                                        category="Reading metadata files",
-                                        interval_pct=5)
+    with requests.Session() as session:
+        indexer = FileIndexer(md_index, metadata_dir, session, total)
+        with Pool(int(THREAD_POOL_SIZE)) as p:
+            p.map(indexer.index_from_file, files)
+
     return md_index
 
 
-def index_from_file(file_path, filename, md_index, session):
+class FileIndexer:
+
+    def __init__(self, md_index, metadata_dir, session, total):
+        self.md_index = md_index
+        self.metadata_dir = metadata_dir
+        self.session = session
+        self.total = total
+        self.count = 0
+        self.last_log = 0
+
+    def index_from_file(self, filename):
+        if filename.endswith(".xml"):
+            file_path = f"{self.metadata_dir}/{filename}"
+            logger.debug(f"Processing metadata file {file_path}")
+            add_file_to_index(file_path, filename, self.md_index, self.session)
+
+        self.count += 1
+        self.last_log = log_progress(logger, self.total, self.count, self.last_log,
+                                category="Reading metadata files",
+                                interval_pct=5)
+
+
+def add_file_to_index(file_path, filename, md_index, session):
     try:
         doc = etree.parse(file_path)
         identifiers = xpath_text_values(doc, '/rdf:RDF/ore:Proxy/dc:identifier')
