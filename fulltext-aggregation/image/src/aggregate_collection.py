@@ -3,6 +3,7 @@ import logging
 import os
 import requests
 import time
+import re
 
 from lxml import etree
 from multiprocessing import Pool
@@ -107,8 +108,16 @@ def process_file(file_path, filename):
             years = [date_to_year(date)
                      for date in xpath_text_values(doc, '/rdf:RDF/ore:Proxy/dcterms:issued')]
 
-            iiif_referencees = xpath(doc, '/rdf:RDF/edm:WebResource/dcterms:isReferencedBy/@rdf:resource')
-            manifest_urls = list(set(iiif_referencees))
+            # ideally we can get the IIIF manifest URL
+            iiif_manifest_urls = xpath(doc, '/rdf:RDF/edm:WebResource/dcterms:isReferencedBy/@rdf:resource')
+            if iiif_manifest_urls is not None:
+                manifest_urls = [ref for ref in set(iiif_manifest_urls) if ref.startswith(IIIF_API_URL)]
+
+            # if this does not work, we can construct one based on the CHO id
+            if manifest_urls is None or len(manifest_urls) == 0:
+                constructed = construct_iiif_reference(doc)
+                if constructed:
+                    manifest_urls = [constructed]
 
             return {
                 'identifier': identifier,
@@ -206,6 +215,19 @@ def extract_fulltext_record_id(file_path):
 
 
 # --------- Helpers ---------
+
+
+def construct_iiif_reference(doc):
+    cho_identifier = xpath(doc, '/rdf:RDF/edm:ProvidedCHO/@rdf:about')
+    if len(cho_identifier) == 1:
+        # example identifier value:
+        # http://data.europeana.eu/item/9200356/BibliographicResource_3000100359046
+        match = re.search(r'\/([^\/]+\/[^\/]+)$', cho_identifier[0])
+        if match:
+            # example manifest URL:
+            # https://iiif.europeana.eu/presentation/9200356/BibliographicResource_3000100359046/manifest
+            return f"{IIIF_API_URL}/presentation/{match.group(1)}/manifest"
+    return None
 
 
 def test_run():
