@@ -18,6 +18,8 @@ services:
       - FULLTEXT_PATH=/input/fulltext
       - OUTPUT_DIR=/output
       - IIIF_API_URL=https://iiif.europeana.eu
+      - LANDING_PAGE_URL=https://pro.europeana.eu/page/iiif#download
+      - COLLECTION_DISPLAY_NAME=Europeana newspapers full-text
       - API_RETRIEVAL_THREAD_POOL_SIZE=10
       - FILE_PROCESSING_THREAD_POOL_SIZE=10
     volumes:

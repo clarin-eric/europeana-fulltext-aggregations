@@ -12,10 +12,13 @@ from iso639 import languages
 
 from common import CMD_NS, CMDP_NS, CMD_NAMESPACES
 from common import xpath, get_unique_xpath_values
-from common import normalize_identifier, xml_id, is_valid_date
+from common import normalize_identifier, xml_id, is_valid_date, get_optional_env_var
 
-COLLECTION_DISPLAY_NAME = 'Europeana newspapers full-text'
-DUMP_PROXY_ID = 'archive'
+COLLECTION_DISPLAY_NAME = get_optional_env_var('COLLECTION_DISPLAY_NAME', 'Europeana newspapers full-text')
+LANDING_PAGE_ID = 'landing_page'
+LANDING_PAGE_URL = get_optional_env_var('LANDING_PAGE_URL', 'https://pro.europeana.eu/page/iiif#download')
+EDM_DUMP_PROXY_ID = 'archive_edm'
+ALTO_DUMP_PROXY_ID = 'archive_alto'
 DUMP_MEDIA_TYPE = 'application/zip'
 
 logger = logging.getLogger(__name__)
@@ -85,12 +88,14 @@ def set_metadata_headers(doc):
 
 
 def insert_resource_proxies(resource_proxies_list, collection_id, records):
-    # dump URL
-    insert_resource_proxy(resource_proxies_list, DUMP_PROXY_ID, "Resource",
-                          make_dump_ref(collection_id), DUMP_MEDIA_TYPE)
+    # landing page
+    insert_resource_proxy(resource_proxies_list, LANDING_PAGE_ID, "LandingPage", LANDING_PAGE_URL)
 
-    # TODO: ALTO dump
-    # TODO: landing page (configured URL)
+    # dump URLs
+    insert_resource_proxy(resource_proxies_list, EDM_DUMP_PROXY_ID, "Resource",
+                          make_edm_dump_ref(collection_id), DUMP_MEDIA_TYPE)
+    insert_resource_proxy(resource_proxies_list, ALTO_DUMP_PROXY_ID, "Resource",
+                          make_alto_dump_ref(collection_id), DUMP_MEDIA_TYPE)
 
     # full text resources from IIIF API
     # 'records' is a map identifer -> {file, manifest_urls[]}
@@ -144,7 +149,7 @@ def insert_component_content(components_root, title, year, edm_records):
     insert_licences(components_root, edm_records)
     # Subresources
     insert_subresource_info(components_root, edm_records)
-    # TODO: subresource info for dumps
+    # TODO: subresource info for dumps (ALTO and EDM)
     # Metadata information
     insert_metadata_info(components_root)
 
@@ -316,8 +321,12 @@ def insert_metadata_info(parent):
     parent.insert(len(parent), metadata_info)
 
 
-def make_dump_ref(collection_id):
+def make_edm_dump_ref(collection_id):
     return f"ftp://download.europeana.eu/newspapers/fulltext/edm_issue/{collection_id}.zip"
+
+
+def make_alto_dump_ref(collection_id):
+    return f"ftp://download.europeana.eu/newspapers/fulltext/alto/{collection_id}.zip"
 
 
 def today_string():
