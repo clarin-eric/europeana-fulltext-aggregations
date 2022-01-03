@@ -58,8 +58,14 @@ download_and_unpack() {
     if 7z x "${FILE}"; then
       # Move all files in target directory 'root'
       find "${DIR}" -mindepth 2 -type f -exec "${MV_COMMAND:-mv}" -t "${DIR}" -i '{}' +
+      rm "${FILE}"
       return 0
     fi
+  fi
+
+  # Clean up download
+  if [ -e "${FILE}" ]; then
+    rm "${FILE}"
   fi
 
   # signal to retry (or give up)

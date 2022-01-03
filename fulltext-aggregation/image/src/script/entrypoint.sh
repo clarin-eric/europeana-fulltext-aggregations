@@ -5,46 +5,63 @@ START_DIR="$(pwd)"
 
 usage() {
   echo "
-  Usage: ${0} <command> <arguments..>
+  Usage: ${0} <commands..> <collection id>
 
   Commands:
-    retrieve <collection id>
-    aggregate <...>
-    clean
+    retrieve|aggregate|clean
   "
 }
 
 main() {
-  COMMAND="$1"
-  info "Command: ${COMMAND}"
-  shift
-  ARGUMENTS=( "$@" )
-  info "Arguments:" "${ARGUMENTS[@]}"
-
+  # check required environment variables
   [ "${INPUT_DIR:?Error - input directory not set}" ]
   [ "${OUTPUT_DIR:?Error - Output directory not set}" ]
 
-  case "${COMMAND}" in
+  if [ "$#" -lt 2 ]; then
+    usage
+    exit 1
+  fi
 
-    'retrieve')
-      COLLECTION_ID="${ARGUMENTS[0]}"
+  RETRIEVE=0
+  AGGREGATE=0
+  CLEAN=0
 
-      if ! [ "${COLLECTION_ID}" ]; then
-        echo "ERROR - No collection identifier provided"
-        exit 1
-      fi
+  while [ "$#" -gt 1 ]; do
+    case "$1" in
+      'retrieve')
+        RETRIEVE=1 ;;
+      'aggregate')
+        AGGREGATE=1 ;;
+      'clean')
+        CLEAN=1 ;;
+      '*')
+        usage; exit 1 ;;
+    esac
+    shift
+  done
 
+  if [ $((RETRIEVE+AGGREGATE+CLEAN)) = 0 ]; then
+    usage
+    exit 1
+  fi
+
+  COLLECTION_ID="$1"
+
+  echo "Retrieve: ${RETRIEVE}"
+  echo "Aggregate: ${AGGREGATE}"
+  echo "Clean: ${CLEAN}"
+  echo "Collection ID: ${COLLECTION_ID}"
+
+  if ! [ "${COLLECTION_ID}" ]; then
+    echo "ERROR - No collection identifier provided"
+    exit 1
+  fi
+
+  if [ "${RETRIEVE}" = 1 ]; then
       "${SCRIPT_DIR}/retrieve.sh" "${COLLECTION_ID}"
-      ;;
+  fi
 
-    'aggregate')
-      COLLECTION_ID="${ARGUMENTS[0]}"
-
-      if ! [ "${COLLECTION_ID}" ]; then
-        echo "ERROR - No collection identifier provided"
-        exit 1
-      fi
-
+  if [ "${AGGREGATE}" = 1 ]; then
       INPUT="${INPUT_DIR}/${COLLECTION_ID}"
       OUTPUT="${OUTPUT_DIR}/${COLLECTION_ID}"
 
@@ -58,22 +75,16 @@ main() {
         cd "${SCRIPT_DIR}/.." \
           && python3 '__main__.py' "${COLLECTION_ID}" "${INPUT}" "${OUTPUT}"
       )
-      ;;
+  fi
 
-    'clean')
-      echo "Erasing content of ${INPUT_DIR}"
-      if [ -d "${INPUT_DIR}" ]; then
-        ( cd "${INPUT_DIR}" && find . -type d -maxdepth 1 -mindepth 1|xargs rm -rf )
-      else
-        echo "Error: ${INPUT_DIR} not found"
-      fi
-      ;;
-
-    '*')
-      usage
-      exit 1
-      ;;
-  esac
+  if [ "${CLEAN}" = 1 ]; then
+    echo "Erasing content for ${COLLECTION_ID} in ${INPUT_DIR}"
+    if [ -d "${INPUT_DIR}" ]; then
+      ( cd "${INPUT_DIR}" && find . -name "${COLLECTION_ID}" -type d -maxdepth 1 -mindepth 1|xargs rm -rf )
+    else
+      echo "Error: ${INPUT_DIR} not found"
+    fi
+  fi
 }
 
 log() {

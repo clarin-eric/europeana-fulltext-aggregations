@@ -2,11 +2,11 @@
 Usage with docker:
 
 ```shell
-bash build.sh #only before first run
+bash build.sh # only before first run or after an update of the sources
 
 cp .env-template .env
 vi .env # or editor of choice :)
-# configure a local output directory and other (optional) settings
+## configure a local output directory and other settings
 
 COLLECTION_ID=...... # for instance '9200396'
 
@@ -16,6 +16,10 @@ COLLECTION_ID=...... # for instance '9200396'
 ./run.sh aggregate "${COLLECTION_ID}" && \
 `# clean retrieved resources (does not touch the output)` && \
 ./run.sh clean
+
+## OR run the subcommands in one go:
+# ./run.sh retrieve aggregate clean "${COLLECTION_ID}" 
 ```
+
 
 Alternatively you can run the Python script in `image/src` locally.
