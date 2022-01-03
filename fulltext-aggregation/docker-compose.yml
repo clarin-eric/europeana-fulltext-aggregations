@@ -4,7 +4,7 @@ services:
     image: europeana-aggregator:latest
     build: ./image
     environment:
-      - RECORD_API_KEY="${RECORD_API_KEY:?Europeana API key must be set}"
+      - RECORD_API_KEY=${RECORD_API_KEY:?Europeana API key must be set}
       - METADATA_PATH=/input/metadata
       - FULLTEXT_PATH=/input/fulltext
       - OUTPUT_DIR=/output
