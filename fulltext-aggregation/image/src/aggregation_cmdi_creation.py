@@ -1,6 +1,5 @@
 import logging
 import os
-
 import requests
 
 import retrieve_iiif_annotations

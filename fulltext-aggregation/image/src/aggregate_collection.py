@@ -7,7 +7,7 @@ import re
 
 from glom import glom, PathAccessError
 from lxml import etree
-from multiprocessing import Pool, Manager, Lock, log_to_stderr
+from multiprocessing import Pool, Manager
 
 from aggregation_cmdi_creation import make_cmdi_record, make_cmdi_template
 from common import log_progress
