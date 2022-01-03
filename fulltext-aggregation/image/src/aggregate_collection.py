@@ -3,12 +3,11 @@ import logging
 import os
 import requests
 import time
-import threading
 import re
 
-from glom import glom, SKIP, PathAccessError
+from glom import glom, PathAccessError
 from lxml import etree
-from multiprocessing import Pool
+from multiprocessing import Pool, Manager, Lock, log_to_stderr
 
 from aggregation_cmdi_creation import make_cmdi_record, make_cmdi_template
 from common import log_progress
@@ -61,10 +60,13 @@ def make_md_index(metadata_dir):
     logger.info(f"Reading metadata from {len(files)} files in {metadata_dir}")
     total = len(files)
 
-    with requests.Session() as session:
-        indexer = FileProcessor(md_index, metadata_dir, session, total)
-        with Pool(int(THREAD_POOL_SIZE)) as p:
-            data = p.map(indexer.process, files)
+    with Manager() as manager:
+        part_of_title_map = manager.dict()
+        map_lock = manager.Lock()
+        with requests.Session() as session:
+            indexer = FileProcessor(md_index, metadata_dir, session, total, part_of_title_map, map_lock)
+            with Pool(int(THREAD_POOL_SIZE)) as p:
+                data = p.map(indexer.process, files)
 
         for item in data:
             # non-matching files yield no response
@@ -79,12 +81,9 @@ def make_md_index(metadata_dir):
     return md_index
 
 
-map_lock = threading.Lock()
-
-
 class FileProcessor:
 
-    def __init__(self, md_index, metadata_dir, session, total, part_of_title_map=None):
+    def __init__(self, md_index, metadata_dir, session, total, part_of_title_map, map_lock):
         self.md_index = md_index
         self.metadata_dir = metadata_dir
         self.session = session
@@ -92,10 +91,8 @@ class FileProcessor:
         self.count = 0
         self.last_log = 0
 
-        if part_of_title_map is None:
-            self.part_of_title_map = {}
-        else:
-            self.part_of_title_map = part_of_title_map
+        self.part_of_title_map = part_of_title_map
+        self.map_lock = map_lock
 
     def process(self, filename):
         if filename.endswith(".xml"):
@@ -156,11 +153,10 @@ class FileProcessor:
                 in xpath_text_values(doc, '/rdf:RDF/edm:ProvidedCHO/dc:title')]
 
     def look_up_title(self, ref):
-        with map_lock:
-
-            logging.info(f"Map: {self.part_of_title_map}")
+        # mplog = log_to_stderr()
+        # mplog.setLevel(logging.INFO)
+        with self.map_lock:
             from_map = self.part_of_title_map.get(ref, None)
-            logging.info(f"From map: {ref} -> {from_map}")
             if from_map:
                 # fetch title from map (cache)
                 return from_map
@@ -170,7 +166,7 @@ class FileProcessor:
                 if match:
                     edm_id = match.group(1)
                     url = f"{RECORD_API_URL}/{edm_id}.json?wskey={RECORD_API_KEY}"
-                    logging.info(f"Getting collection record from {url}")
+                    # mplog.info(f"Getting collection record from {url}")
                     json_doc = get_json_from_http(url)
                     if json_doc is not None:
                         proxies = glom(json_doc, 'object.proxies', default=None, skip_exc=PathAccessError)
@@ -179,6 +175,7 @@ class FileProcessor:
                                 titles = glom(proxy, 'dcTitle.def', default=None, skip_exc=PathAccessError)
                                 if titles and len(titles) > 0:
                                     title = titles[0]
+                                    # mplog.info(f"Setting title in map: {ref} -> {title}")
                                     self.part_of_title_map[ref] = title
                                     return title
 
