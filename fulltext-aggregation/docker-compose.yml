@@ -1,23 +1,15 @@
-#Example usage:
-# export COLLECTION_ID=9200396
-# export METADATA_PATH="${HOME}/Documents/Projects/Europeana/fulltext/dumps/edm-md/${COLLECTION_ID}"
-# export FULLTEXT_PATH="${HOME}/Documents/Projects/Europeana/fulltext/dumps/edm-issue/${COLLECTION_ID}"
-# export BASE_URL="https://www.clarin.eu/resources/europeana/fulltext/${COLLECTION_ID}/"
-# export OUTPUT_DIR="$(pwd)/output"
-# docker-compose run europeana-aggregator process
-
-
-
 version: "3.3"
 services:
   europeana-aggregator:
     image: europeana-aggregator:latest
     build: ./image
     environment:
+      - RECORD_API_KEY="${RECORD_API_KEY:?Europeana API key must be set}"
       - METADATA_PATH=/input/metadata
       - FULLTEXT_PATH=/input/fulltext
       - OUTPUT_DIR=/output
       - IIIF_API_URL=https://iiif.europeana.eu
+      - RECORD_API_URL=https://api.europeana.eu/record/v2
       - LANDING_PAGE_URL=https://pro.europeana.eu/page/iiif#download
       - COLLECTION_DISPLAY_NAME=Europeana newspapers full-text
       - API_RETRIEVAL_THREAD_POOL_SIZE=10

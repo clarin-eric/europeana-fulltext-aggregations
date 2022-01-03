@@ -102,7 +102,7 @@ def is_valid_date(date):
     return re.match(r"(^\d{4})-\d{2}-\d{2}$", date) is not None
 
 
-def normalize_title(title):
+def normalize_issue_title(title):
     match = re.search(r"^[A-z0-9'\"()\s]*[A-z0-9'\"()]", unidecode.unidecode(title))
     if match:
         return title[match.start(0):match.end(0)]

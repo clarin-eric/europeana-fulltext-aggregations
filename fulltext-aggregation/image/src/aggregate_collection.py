@@ -3,16 +3,19 @@ import logging
 import os
 import requests
 import time
+import threading
 import re
 
+from glom import glom, SKIP, PathAccessError
 from lxml import etree
 from multiprocessing import Pool
 
 from aggregation_cmdi_creation import make_cmdi_record, make_cmdi_template
 from common import log_progress
+from common import get_json_from_http
 from common import xpath, xpath_text_values
-from common import normalize_title, normalize_identifier, date_to_year, filename_safe
-from common import get_optional_env_var
+from common import normalize_issue_title, normalize_identifier, date_to_year, filename_safe
+from common import get_optional_env_var, get_mandatory_env_var
 
 from common import ALL_NAMESPACES
 
@@ -20,12 +23,15 @@ logger = logging.getLogger(__name__)
 
 THREAD_POOL_SIZE = int(get_optional_env_var('FILE_PROCESSING_THREAD_POOL_SIZE', '10'))
 IIIF_API_URL = get_optional_env_var('IIIF_API_URL', 'https://iiif.europeana.eu')
+EDM_ID_PATTERN = re.compile(r'^[A-z]+://data.europeana.eu/item/([^/]+/[^/]+)$')
+RECORD_API_URL = get_optional_env_var('RECORD_API_URL', 'https://api.europeana.eu/record/v2')
+RECORD_API_KEY = get_mandatory_env_var('RECORD_API_KEY')
 
 
 def aggregate(collection_id, metadata_dir, output_dir):
     start_time = time.time()
 
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig()
     logger.setLevel(logging.INFO)
     logger.info(f"Start time: {time.strftime('%c', time.localtime(start_time))}")
 
@@ -73,9 +79,12 @@ def make_md_index(metadata_dir):
     return md_index
 
 
+map_lock = threading.Lock()
+
+
 class FileProcessor:
 
-    def __init__(self, md_index, metadata_dir, session, total):
+    def __init__(self, md_index, metadata_dir, session, total, part_of_title_map=None):
         self.md_index = md_index
         self.metadata_dir = metadata_dir
         self.session = session
@@ -83,52 +92,95 @@ class FileProcessor:
         self.count = 0
         self.last_log = 0
 
+        if part_of_title_map is None:
+            self.part_of_title_map = {}
+        else:
+            self.part_of_title_map = part_of_title_map
+
     def process(self, filename):
         if filename.endswith(".xml"):
             file_path = f"{self.metadata_dir}/{filename}"
             logging.debug(f"Processing metadata file {file_path}")
-            return process_file(file_path, filename)
+            return self.process_file(file_path, filename)
 
         self.count += 1
         self.last_log = log_progress(None, self.total, self.count, self.last_log,
                                      category="Reading metadata files",
                                      interval=1)
 
+    def process_file(self, file_path, filename):
+        try:
+            doc = etree.parse(file_path)
+            identifiers = xpath_text_values(doc, '/rdf:RDF/ore:Proxy/dc:identifier')
+            if len(identifiers) == 0:
+                logger.error(f"No identifier in {file_path}")
+            else:
+                identifier = normalize_identifier(identifiers[0])
+                titles = self.get_titles(doc)
+                years = [date_to_year(date)
+                         for date in xpath_text_values(doc, '/rdf:RDF/ore:Proxy/dcterms:issued')]
 
-def process_file(file_path, filename):
-    try:
-        doc = etree.parse(file_path)
-        identifiers = xpath_text_values(doc, '/rdf:RDF/ore:Proxy/dc:identifier')
-        if len(identifiers) == 0:
-            logger.error(f"No identifier in {file_path}")
-        else:
-            identifier = normalize_identifier(identifiers[0])
-            titles = [normalize_title(title)
-                      for title in xpath_text_values(doc, '/rdf:RDF/ore:Proxy/dc:title')]
-            years = [date_to_year(date)
-                     for date in xpath_text_values(doc, '/rdf:RDF/ore:Proxy/dcterms:issued')]
+                # ideally we can get the IIIF manifest URL
+                iiif_manifest_urls = xpath(doc, '/rdf:RDF/edm:WebResource/dcterms:isReferencedBy/@rdf:resource')
+                if iiif_manifest_urls is not None:
+                    manifest_urls = [ref for ref in set(iiif_manifest_urls) if ref.startswith(IIIF_API_URL)]
 
-            # ideally we can get the IIIF manifest URL
-            iiif_manifest_urls = xpath(doc, '/rdf:RDF/edm:WebResource/dcterms:isReferencedBy/@rdf:resource')
-            if iiif_manifest_urls is not None:
-                manifest_urls = [ref for ref in set(iiif_manifest_urls) if ref.startswith(IIIF_API_URL)]
+                # if this does not work, we can construct one based on the CHO id
+                if manifest_urls is None or len(manifest_urls) == 0:
+                    constructed = construct_iiif_reference(doc)
+                    if constructed:
+                        manifest_urls = [constructed]
 
-            # if this does not work, we can construct one based on the CHO id
-            if manifest_urls is None or len(manifest_urls) == 0:
-                constructed = construct_iiif_reference(doc)
-                if constructed:
-                    manifest_urls = [constructed]
+                return {
+                    'identifier': identifier,
+                    'titles': titles,
+                    'years': years,
+                    'filename': filename,
+                    'manifest_urls': manifest_urls
+                }
 
-            return {
-                'identifier': identifier,
-                'titles': titles,
-                'years': years,
-                'filename': filename,
-                'manifest_urls': manifest_urls
-            }
+        except etree.Error as err:
+            logger.error(f"Error processing XML document: {err=}")
 
-    except etree.Error as err:
-        logger.error(f"Error processing XML document: {err=}")
+    def get_titles(self, doc):
+        # look up (newspaper) collection title (or use previously looked up)
+        part_of_refs = xpath(doc, '/rdf:RDF/ore:Proxy/dcterms:isPartOf/@rdf:resource')
+        titles = [self.look_up_title(ref) for ref in part_of_refs if ref is not None]
+        titles = [title for title in titles if title is not None]
+        if titles and len(titles) > 0:
+            return titles
+
+        # use normalized issue title(s)
+        return [normalize_issue_title(title)
+                for title
+                in xpath_text_values(doc, '/rdf:RDF/edm:ProvidedCHO/dc:title')]
+
+    def look_up_title(self, ref):
+        with map_lock:
+
+            logging.info(f"Map: {self.part_of_title_map}")
+            from_map = self.part_of_title_map.get(ref, None)
+            logging.info(f"From map: {ref} -> {from_map}")
+            if from_map:
+                # fetch title from map (cache)
+                return from_map
+            else:
+                # retrieve title from API
+                match = EDM_ID_PATTERN.match(ref)
+                if match:
+                    edm_id = match.group(1)
+                    url = f"{RECORD_API_URL}/{edm_id}.json?wskey={RECORD_API_KEY}"
+                    logging.info(f"Getting collection record from {url}")
+                    json_doc = get_json_from_http(url)
+                    if json_doc is not None:
+                        proxies = glom(json_doc, 'object.proxies', default=None, skip_exc=PathAccessError)
+                        if proxies:
+                            for proxy in proxies:
+                                titles = glom(proxy, 'dcTitle.def', default=None, skip_exc=PathAccessError)
+                                if titles and len(titles) > 0:
+                                    title = titles[0]
+                                    self.part_of_title_map[ref] = title
+                                    return title
 
 
 def add_to_index(index, identifier, titles, years, filename, manifest_urls):
