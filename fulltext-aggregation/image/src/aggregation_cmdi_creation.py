@@ -264,12 +264,16 @@ def create_language_component(parent, language_code):
     language_node = etree.SubElement(parent, '{' + CMDP_NS + '}Language', nsmap=CMD_NAMESPACES)
     language_name_node = etree.SubElement(language_node, '{' + CMDP_NS + '}name', nsmap=CMD_NAMESPACES)
     language = None
-    if len(language_code) == 2:
-        # lookup 639-1 code to get name + 3 letter code
-        language = languages.get(alpha2=language_code)
-    if len(language_code) == 3:
-        # lookup for 3 letter code
-        language = languages.get(part3=language_code)
+
+    try:
+        if len(language_code) == 2:
+            # lookup 639-1 code to get name + 3 letter code
+            language = languages.get(alpha2=language_code)
+        if len(language_code) == 3:
+            # lookup for 3 letter code
+            language = languages.get(part3=language_code)
+    except KeyError:
+        logger.warning(f"Language name lookup failed: no code '{language_code}' in dictionary")
     if language is None:
         language_name_node.text = language_code
     else:
