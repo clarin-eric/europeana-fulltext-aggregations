@@ -145,6 +145,8 @@ def insert_component_content(components_root, title, year, edm_records):
     insert_languages(components_root, edm_records)
     # Temporal coverage
     insert_temporal_coverage(components_root, year)
+    # Countries
+    insert_countries(components_root, edm_records)
     # Licence information
     insert_licences(components_root, edm_records)
     # Subresources
@@ -209,6 +211,17 @@ def insert_temporal_coverage(parent, year):
         temporal_coverage_node, '{' + CMDP_NS + '}End', nsmap=CMD_NAMESPACES),
         '{' + CMDP_NS + '}year', nsmap=CMD_NAMESPACES)
     end_year.text = year
+
+
+def insert_countries(parent, edm_record):
+    countries = rights_urls = get_unique_xpath_values(edm_record, '/rdf:RDF/edm:EuropeanaAggregation/edm:country/text()')
+    for country in countries:
+        geolocation_node = etree.SubElement(parent, '{' + CMDP_NS + '}GeoLocation', nsmap=CMD_NAMESPACES)
+        label_node = etree.SubElement(geolocation_node, '{' + CMDP_NS + '}label', nsmap=CMD_NAMESPACES)
+        label_node.text = country
+        country_node = etree.SubElement(geolocation_node, '{' + CMDP_NS + '}Country', nsmap=CMD_NAMESPACES)
+        country_label_node = etree.SubElement(country_node, '{' + CMDP_NS + '}label', nsmap=CMD_NAMESPACES)
+        country_label_node.text = country
 
 
 def insert_licences(parent, edm_records):
