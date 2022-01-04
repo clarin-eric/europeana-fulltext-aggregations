@@ -10,6 +10,7 @@ from lxml import etree
 from multiprocessing import Pool, Manager
 
 from aggregation_cmdi_creation import make_cmdi_record, make_cmdi_template
+from aggregation_cmdi_creation import make_collection_record, make_collection_record_template
 from common import log_progress
 from common import get_json_from_http
 from common import xpath, xpath_text_values
@@ -198,12 +199,14 @@ def save_index(index, index_filename):
 def generate_cmdi_records(collection_id, index, metadata_dir, output_dir):
     os.makedirs(output_dir, exist_ok=True)
     template = make_cmdi_template()
+    collection_template = make_collection_record_template()
     total = sum([len(index[title]) for title in index])
     count = 0
     last_log = 0
 
     files_created = []
     for title in index:
+        files_for_years = {}
         years = index[title]
         for year in years:
             # for each year there is a dict of identifier -> {file, annotation_ref[]}
@@ -211,28 +214,43 @@ def generate_cmdi_records(collection_id, index, metadata_dir, output_dir):
 
             if file_created := generate_cmdi_record(records, collection_id, title, year,
                                                     output_dir, metadata_dir, template):
-                files_created += [file_created]
+                files_for_years[year] = file_created
 
             count += 1
             last_log = log_progress(logger, total, count, last_log,
                                     category="Generating CMDI records",
                                     interval=1)
 
-    logger.info(f"{len(files_created)} title/year records created")
-    # TODO: generate parent record listing [files_created]
+        logger.info(f"{len(files_for_years)} year records generated for title '{title}'")
+
+        if len(files_for_years) > 1:
+            # Make a 'parent' record for the title that links to all years
+            logger.info(f"Generating collection record for title '{title}'")
+            generate_collection_record(collection_id, title, files_for_years, output_dir, collection_template)
 
 
 def generate_cmdi_record(records, collection_id, title, year, output_dir, metadata_dir, template):
-    file_name = f"{output_dir}/{filename_safe(title + '_' + year)}.cmdi"
-    logger.debug(f"Generating metadata file {file_name}")
-    cmdi_file = make_cmdi_record(template, collection_id, title, year, records, metadata_dir)
-    if cmdi_file:
-        # wrap up and write to file
-        etree.indent(cmdi_file, space="  ", level=0)
-        etree.cleanup_namespaces(cmdi_file, top_nsmap=ALL_NAMESPACES)
-        cmdi_file.write(file_name, encoding='utf-8', pretty_print=True, xml_declaration=True)
+    file_name = f"{filename_safe(title + '_' + year)}.cmdi"
+    file_path = f"{output_dir}/{file_name}"
+    logger.debug(f"Generating metadata file {file_path}")
+    if cmdi_file := make_cmdi_record(template, collection_id, title, year, records, metadata_dir):
+        write_xml_tree_to_file(cmdi_file, file_path)
         return file_name
-    return None
+
+
+def generate_collection_record(collection_id, title, year_files, output_dir, template):
+    file_name = f"{filename_safe(title + '_collection')}.cmdi"
+    file_path = f"{output_dir}/{file_name}"
+    logger.debug(f"Generating metadata file {file_path}")
+    if cmdi_file := make_collection_record(template, collection_id, title, year_files):
+        write_xml_tree_to_file(cmdi_file, file_path)
+
+
+def write_xml_tree_to_file(cmdi_file, file_name):
+    # wrap up and write to file
+    etree.indent(cmdi_file, space="  ", level=0)
+    etree.cleanup_namespaces(cmdi_file, top_nsmap=ALL_NAMESPACES)
+    cmdi_file.write(file_name, encoding='utf-8', pretty_print=True, xml_declaration=True)
 
 
 def collect_fulltext_ids(fulltext_dir):

@@ -18,13 +18,20 @@ LANDING_PAGE_ID = 'landing_page'
 EDM_DUMP_PROXY_ID = 'archive_edm'
 ALTO_DUMP_PROXY_ID = 'archive_alto'
 DUMP_MEDIA_TYPE = 'application/zip'
+FULL_TEXT_RECORD_TEMPLATE_FILE = 'fulltextresource-template.xml'
+COLLECTION_RECORD_TEMPLATE_FILE = 'collectionrecord-template.xml'
 
 logger = logging.getLogger(__name__)
 
 
 def make_cmdi_template():
     script_path = os.path.dirname(os.path.realpath(__file__))
-    return etree.parse(f"{script_path}/fulltextresource-template.xml")
+    return etree.parse(f"{script_path}/{FULL_TEXT_RECORD_TEMPLATE_FILE}")
+
+
+def make_collection_record_template():
+    script_path = os.path.dirname(os.path.realpath(__file__))
+    return etree.parse(f"{script_path}/{COLLECTION_RECORD_TEMPLATE_FILE}")
 
 
 def make_cmdi_record(template, collection_id, title, year, records, metadata_dir):
@@ -341,6 +348,38 @@ def insert_metadata_info(parent):
           </MetadataInfo>
         ''')
     parent.insert(len(parent), metadata_info)
+
+
+def make_collection_record(template, collection_id, title, year_files):
+    cmdi_file = deepcopy(template)
+
+    # Metadata headers
+    set_metadata_headers(cmdi_file)
+
+    # Resource proxies
+    resource_proxies_list = xpath(cmdi_file, '/cmd:CMD/cmd:Resources/cmd:ResourceProxyList')
+    if len(resource_proxies_list) != 1:
+        logger.error("Expecting exactly one components root element")
+        return None
+    else:
+        insert_collection_resource_proxies(resource_proxies_list[0], year_files, collection_id)
+
+    return cmdi_file
+
+
+def insert_collection_resource_proxies(resource_proxies_list, year_files, collection_id):
+    # landing page
+    insert_resource_proxy(resource_proxies_list, LANDING_PAGE_ID, "LandingPage", LANDING_PAGE_URL)
+
+    # dump URLs
+    insert_resource_proxy(resource_proxies_list, EDM_DUMP_PROXY_ID, "Resource",
+                          make_edm_dump_ref(collection_id), DUMP_MEDIA_TYPE)
+    insert_resource_proxy(resource_proxies_list, ALTO_DUMP_PROXY_ID, "Resource",
+                          make_alto_dump_ref(collection_id), DUMP_MEDIA_TYPE)
+
+    # links to metadata records
+    for year in sorted(year_files):
+        insert_resource_proxy(resource_proxies_list, xml_id(year), "Metadata", year_files[year])
 
 
 def make_edm_dump_ref(collection_id):
