@@ -37,13 +37,18 @@ def make_cmdi_record(template, collection_id, title, year, records, metadata_dir
     resource_proxies_list = xpath(cmdi_file, '/cmd:CMD/cmd:Resources/cmd:ResourceProxyList')
     if len(resource_proxies_list) != 1:
         logger.error("Expecting exactly one components root element")
+        return None
     else:
-        insert_resource_proxies(resource_proxies_list[0], collection_id, records)
+        fulltext_refs_inserted = insert_resource_proxies(resource_proxies_list[0], collection_id, records)
+        if not fulltext_refs_inserted:
+            logger.warning(f"Skipping creation of record for '{title} - {year}': no full text resources to refer to")
+            return None
 
     # Component section
     components_root = xpath(cmdi_file, '/cmd:CMD/cmd:Components/cmdp:TextResource')
     if len(components_root) != 1:
         logger.error("Expecting exactly one components root element")
+        return None
     else:
         # load EDM metadata records
         edm_records = load_emd_records(records, metadata_dir)
@@ -97,20 +102,22 @@ def insert_resource_proxies(resource_proxies_list, collection_id, records):
 
     # full text resources from IIIF API
     # 'records' is a map identifer -> {file, manifest_urls[]}
+    fulltext_ref_count = 0
     with requests.Session() as session:
         for identifier in records:
             index = 0
             manifest_urls = records[identifier].get('manifest_urls', None)
             if manifest_urls is None:
                 logger.warning(f"No manifest URLs specified for record {identifier}")
-                # TODO: Exception
             else:
                 refs = retrieve_iiif_annotation_refs(manifest_urls, session)
-                # TODO: Exception if len(refs) == 0
                 for ref in refs:
                     if ref is not None:
                         index += 1
                         insert_resource_proxy(resource_proxies_list, xml_id(f"{identifier}_{index}"), "Resource", ref)
+            fulltext_ref_count += index
+
+    return fulltext_ref_count > 0
 
 
 def retrieve_iiif_annotation_refs(manifest_urls, session):

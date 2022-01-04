@@ -201,25 +201,38 @@ def generate_cmdi_records(collection_id, index, metadata_dir, output_dir):
     total = sum([len(index[title]) for title in index])
     count = 0
     last_log = 0
+
+    files_created = []
     for title in index:
         years = index[title]
         for year in years:
             # for each year there is a dict of identifier -> {file, annotation_ref[]}
             records = years[year]
-            file_name = f"{output_dir}/{filename_safe(title + '_' + year)}.cmdi"
 
-            logger.debug(f"Generating metadata file {file_name}")
-            cmdi_file = make_cmdi_record(template, collection_id, title, year, records, metadata_dir)
-
-            # wrap up and write to file
-            etree.indent(cmdi_file, space="  ", level=0)
-            etree.cleanup_namespaces(cmdi_file, top_nsmap=ALL_NAMESPACES)
-            cmdi_file.write(file_name, encoding='utf-8', pretty_print=True, xml_declaration=True)
+            if file_created := generate_cmdi_record(records, collection_id, title, year,
+                                                    output_dir, metadata_dir, template):
+                files_created += [file_created]
 
             count += 1
             last_log = log_progress(logger, total, count, last_log,
                                     category="Generating CMDI records",
                                     interval=1)
+
+    logger.info(f"{len(files_created)} title/year records created")
+    # TODO: generate parent record listing [files_created]
+
+
+def generate_cmdi_record(records, collection_id, title, year, output_dir, metadata_dir, template):
+    file_name = f"{output_dir}/{filename_safe(title + '_' + year)}.cmdi"
+    logger.debug(f"Generating metadata file {file_name}")
+    cmdi_file = make_cmdi_record(template, collection_id, title, year, records, metadata_dir)
+    if cmdi_file:
+        # wrap up and write to file
+        etree.indent(cmdi_file, space="  ", level=0)
+        etree.cleanup_namespaces(cmdi_file, top_nsmap=ALL_NAMESPACES)
+        cmdi_file.write(file_name, encoding='utf-8', pretty_print=True, xml_declaration=True)
+        return file_name
+    return None
 
 
 def collect_fulltext_ids(fulltext_dir):
