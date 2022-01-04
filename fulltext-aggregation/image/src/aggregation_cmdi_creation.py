@@ -9,7 +9,7 @@ from lxml import etree
 from datetime import date
 from iso639 import languages
 
-from common import CMD_NS, CMDP_NS, CMD_NAMESPACES
+from common import CMD_NS, CMDP_NS_RECORD, CMDP_NS_COLLECTION_RECORD, CMD_NAMESPACES
 from common import xpath, get_unique_xpath_values
 from common import normalize_identifier, xml_id, is_valid_date, get_optional_env_var
 from env import COLLECTION_DISPLAY_NAME, LANDING_PAGE_URL
@@ -52,7 +52,7 @@ def make_cmdi_record(template, collection_id, title, year, records, metadata_dir
             return None
 
     # Component section
-    components_root = xpath(cmdi_file, '/cmd:CMD/cmd:Components/cmdp:TextResource')
+    components_root = xpath(cmdi_file, f"/cmd:CMD/cmd:Components/cmdp:TextResource")
     if len(components_root) != 1:
         logger.error("Expecting exactly one components root element")
         return None
@@ -170,18 +170,18 @@ def insert_component_content(components_root, title, year, edm_records):
 
 def insert_title_and_description(parent, title, year):
     # Add title info
-    title_info_node = etree.SubElement(parent, '{' + CMDP_NS + '}TitleInfo', nsmap=CMD_NAMESPACES)
-    title_node = etree.SubElement(title_info_node, '{' + CMDP_NS + '}title', nsmap=CMD_NAMESPACES)
+    title_info_node = etree.SubElement(parent, '{' + CMDP_NS_COLLECTION_RECORD + '}TitleInfo', nsmap=CMD_NAMESPACES)
+    title_node = etree.SubElement(title_info_node, '{' + CMDP_NS_COLLECTION_RECORD + '}title', nsmap=CMD_NAMESPACES)
     title_node.text = f"{title} - {year}"
 
     # Add description
-    description_info_node = etree.SubElement(parent, '{' + CMDP_NS + '}Description', nsmap=CMD_NAMESPACES)
-    description_node = etree.SubElement(description_info_node, '{' + CMDP_NS + '}description', nsmap=CMD_NAMESPACES)
+    description_info_node = etree.SubElement(parent, '{' + CMDP_NS_COLLECTION_RECORD + '}Description', nsmap=CMD_NAMESPACES)
+    description_node = etree.SubElement(description_info_node, '{' + CMDP_NS_COLLECTION_RECORD + '}description', nsmap=CMD_NAMESPACES)
     description_node.text = f"Full text content aggregated from Europeana. Title: \"{title}\". Year: {year}."
 
     # Add resource type ('Text')
-    resource_type_node = etree.SubElement(parent, '{' + CMDP_NS + '}ResourceType', nsmap=CMD_NAMESPACES)
-    resource_type_label_node = etree.SubElement(resource_type_node, '{' + CMDP_NS + '}label', nsmap=CMD_NAMESPACES)
+    resource_type_node = etree.SubElement(parent, '{' + CMDP_NS_COLLECTION_RECORD + '}ResourceType', nsmap=CMD_NAMESPACES)
+    resource_type_label_node = etree.SubElement(resource_type_node, '{' + CMDP_NS_COLLECTION_RECORD + '}label', nsmap=CMD_NAMESPACES)
     resource_type_label_node.text = "Text"
 
 
@@ -189,8 +189,8 @@ def insert_keywords(parent, edm_records):
     # include dc:type values as keyword
     keywords = get_unique_xpath_values(edm_records, '/rdf:RDF/ore:Proxy/dc:type/text()')
     for keyword in keywords:
-        keyword_node = etree.SubElement(parent, '{' + CMDP_NS + '}Keyword', nsmap=CMD_NAMESPACES)
-        label_node = etree.SubElement(keyword_node, '{' + CMDP_NS + '}label', nsmap=CMD_NAMESPACES)
+        keyword_node = etree.SubElement(parent, '{' + CMDP_NS_RECORD + '}Keyword', nsmap=CMD_NAMESPACES)
+        label_node = etree.SubElement(keyword_node, '{' + CMDP_NS_RECORD + '}label', nsmap=CMD_NAMESPACES)
         label_node.text = keyword
 
 
@@ -199,8 +199,8 @@ def insert_publisher(parent, edm_records):
                                          '/rdf:RDF/ore:Aggregation/edm:dataProvider/text()'
                                          '|/rdf:RDF/ore:Aggregation/edm:provider/text()')
     for publisher in publishers:
-        keyword_node = etree.SubElement(parent, '{' + CMDP_NS + '}Publisher', nsmap=CMD_NAMESPACES)
-        label_node = etree.SubElement(keyword_node, '{' + CMDP_NS + '}name', nsmap=CMD_NAMESPACES)
+        keyword_node = etree.SubElement(parent, '{' + CMDP_NS_RECORD + '}Publisher', nsmap=CMD_NAMESPACES)
+        label_node = etree.SubElement(keyword_node, '{' + CMDP_NS_RECORD + '}name', nsmap=CMD_NAMESPACES)
         label_node.text = publisher
 
 
@@ -211,42 +211,43 @@ def insert_languages(parent, edm_records):
 
 
 def insert_temporal_coverage(parent, year):
-    temporal_coverage_node = etree.SubElement(parent, '{' + CMDP_NS + '}TemporalCoverage',
+    temporal_coverage_node = etree.SubElement(parent, '{' + CMDP_NS_RECORD + '}TemporalCoverage',
                                               nsmap=CMD_NAMESPACES)
-    label_node = etree.SubElement(temporal_coverage_node, '{' + CMDP_NS + '}label', nsmap=CMD_NAMESPACES)
+    label_node = etree.SubElement(temporal_coverage_node, '{' + CMDP_NS_RECORD + '}label', nsmap=CMD_NAMESPACES)
     label_node.text = year
     start_year = etree.SubElement(etree.SubElement(
-        temporal_coverage_node, '{' + CMDP_NS + '}Start', nsmap=CMD_NAMESPACES),
-        '{' + CMDP_NS + '}year', nsmap=CMD_NAMESPACES)
+        temporal_coverage_node, '{' + CMDP_NS_RECORD + '}Start', nsmap=CMD_NAMESPACES),
+        '{' + CMDP_NS_RECORD + '}year', nsmap=CMD_NAMESPACES)
     start_year.text = year
     end_year = etree.SubElement(etree.SubElement(
-        temporal_coverage_node, '{' + CMDP_NS + '}End', nsmap=CMD_NAMESPACES),
-        '{' + CMDP_NS + '}year', nsmap=CMD_NAMESPACES)
+        temporal_coverage_node, '{' + CMDP_NS_RECORD + '}End', nsmap=CMD_NAMESPACES),
+        '{' + CMDP_NS_RECORD + '}year', nsmap=CMD_NAMESPACES)
     end_year.text = year
 
 
 def insert_countries(parent, edm_record):
-    countries = rights_urls = get_unique_xpath_values(edm_record, '/rdf:RDF/edm:EuropeanaAggregation/edm:country/text()')
+    countries = rights_urls = get_unique_xpath_values(edm_record,
+                                                      '/rdf:RDF/edm:EuropeanaAggregation/edm:country/text()')
     for country in countries:
-        geolocation_node = etree.SubElement(parent, '{' + CMDP_NS + '}GeoLocation', nsmap=CMD_NAMESPACES)
-        label_node = etree.SubElement(geolocation_node, '{' + CMDP_NS + '}label', nsmap=CMD_NAMESPACES)
+        geolocation_node = etree.SubElement(parent, '{' + CMDP_NS_RECORD + '}GeoLocation', nsmap=CMD_NAMESPACES)
+        label_node = etree.SubElement(geolocation_node, '{' + CMDP_NS_RECORD + '}label', nsmap=CMD_NAMESPACES)
         label_node.text = country
-        country_node = etree.SubElement(geolocation_node, '{' + CMDP_NS + '}Country', nsmap=CMD_NAMESPACES)
-        country_label_node = etree.SubElement(country_node, '{' + CMDP_NS + '}label', nsmap=CMD_NAMESPACES)
+        country_node = etree.SubElement(geolocation_node, '{' + CMDP_NS_RECORD + '}Country', nsmap=CMD_NAMESPACES)
+        country_label_node = etree.SubElement(country_node, '{' + CMDP_NS_RECORD + '}label', nsmap=CMD_NAMESPACES)
         country_label_node.text = country
 
 
 def insert_licences(parent, edm_records):
     rights_urls = get_unique_xpath_values(edm_records, '/rdf:RDF/ore:Aggregation/edm:rights/@rdf:resource')
     if len(rights_urls) > 0:
-        access_info_node = etree.SubElement(parent, '{' + CMDP_NS + '}AccessInfo', nsmap=CMD_NAMESPACES)
+        access_info_node = etree.SubElement(parent, '{' + CMDP_NS_RECORD + '}AccessInfo', nsmap=CMD_NAMESPACES)
         for rights_url in rights_urls:
-            licence_node = etree.SubElement(access_info_node, '{' + CMDP_NS + '}Licence', nsmap=CMD_NAMESPACES)
-            identifier_node = etree.SubElement(licence_node, '{' + CMDP_NS + '}identifier', nsmap=CMD_NAMESPACES)
+            licence_node = etree.SubElement(access_info_node, '{' + CMDP_NS_RECORD + '}Licence', nsmap=CMD_NAMESPACES)
+            identifier_node = etree.SubElement(licence_node, '{' + CMDP_NS_RECORD + '}identifier', nsmap=CMD_NAMESPACES)
             identifier_node.text = rights_url
-            label_node = etree.SubElement(licence_node, '{' + CMDP_NS + '}label', nsmap=CMD_NAMESPACES)
+            label_node = etree.SubElement(licence_node, '{' + CMDP_NS_RECORD + '}label', nsmap=CMD_NAMESPACES)
             label_node.text = rights_url
-            url_node = etree.SubElement(licence_node, '{' + CMDP_NS + '}url', nsmap=CMD_NAMESPACES)
+            url_node = etree.SubElement(licence_node, '{' + CMDP_NS_RECORD + '}url', nsmap=CMD_NAMESPACES)
             url_node.text = rights_url
 
 
@@ -255,23 +256,23 @@ def insert_subresource_info(components_root, edm_records):
         identifiers = get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:identifier/text()')
         language_codes = get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:language/text()')
 
-        subresource_node = etree.SubElement(components_root, '{' + CMDP_NS + '}Subresource', nsmap=CMD_NAMESPACES)
-        subresource_description_node = etree.SubElement(subresource_node, '{' + CMDP_NS + '}SubresourceDescription',
+        subresource_node = etree.SubElement(components_root, '{' + CMDP_NS_RECORD + '}Subresource', nsmap=CMD_NAMESPACES)
+        subresource_description_node = etree.SubElement(subresource_node, '{' + CMDP_NS_RECORD + '}SubresourceDescription',
                                                         nsmap=CMD_NAMESPACES)
         for title in get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:title/text()'):
-            label_node = etree.SubElement(subresource_description_node, '{' + CMDP_NS + '}label', nsmap=CMD_NAMESPACES)
+            label_node = etree.SubElement(subresource_description_node, '{' + CMDP_NS_RECORD + '}label', nsmap=CMD_NAMESPACES)
             label_node.text = title
         # for description in get_unique_xpath_values([record], '/rdf:RDF/edm:ProvidedCHO/dcterms:extent/text()'
         #                                                      '|/rdf:RDF/edm:ProvidedCHO/dc:type/text()'):
         #     description_node = etree.SubElement(subresource_description_node,
-        #                                         '{' + CMDP_NS + '}description', nsmap=CMD_NAMESPACES)
+        #                                         '{' + CMDP_NS_RECORD + '}description', nsmap=CMD_NAMESPACES)
         #     description_node.text = description
         if len(identifiers) > 0:
-            subresource_node.attrib['{' + CMD_NS + '}ref'] = xml_id(normalize_identifier(identifiers[0])+'_1')
+            subresource_node.attrib['{' + CMD_NS + '}ref'] = xml_id(normalize_identifier(identifiers[0]) + '_1')
             identification_info_node = etree.SubElement(subresource_description_node,
-                                                        '{' + CMDP_NS + '}IdentificationInfo', nsmap=CMD_NAMESPACES)
+                                                        '{' + CMDP_NS_RECORD + '}IdentificationInfo', nsmap=CMD_NAMESPACES)
             for identifier in identifiers:
-                identifier_node = etree.SubElement(identification_info_node, '{' + CMDP_NS + '}identifier',
+                identifier_node = etree.SubElement(identification_info_node, '{' + CMDP_NS_RECORD + '}identifier',
                                                    nsmap=CMD_NAMESPACES)
                 identifier_node.text = identifier
         for language_code in language_codes:
@@ -279,15 +280,15 @@ def insert_subresource_info(components_root, edm_records):
         for issued_date in get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dcterms:issued/text()'):
             if is_valid_date(issued_date):
                 temporal_coverage_node = etree.SubElement(subresource_description_node,
-                                                          '{' + CMDP_NS + '}TemporalCoverage',
+                                                          '{' + CMDP_NS_RECORD + '}TemporalCoverage',
                                                           nsmap=CMD_NAMESPACES)
-                label_node = etree.SubElement(temporal_coverage_node, '{' + CMDP_NS + '}label', nsmap=CMD_NAMESPACES)
+                label_node = etree.SubElement(temporal_coverage_node, '{' + CMDP_NS_RECORD + '}label', nsmap=CMD_NAMESPACES)
                 label_node.text = issued_date
 
 
 def create_language_component(parent, language_code):
-    language_node = etree.SubElement(parent, '{' + CMDP_NS + '}Language', nsmap=CMD_NAMESPACES)
-    language_name_node = etree.SubElement(language_node, '{' + CMDP_NS + '}name', nsmap=CMD_NAMESPACES)
+    language_node = etree.SubElement(parent, '{' + CMDP_NS_RECORD + '}Language', nsmap=CMD_NAMESPACES)
+    language_name_node = etree.SubElement(language_node, '{' + CMDP_NS_RECORD + '}name', nsmap=CMD_NAMESPACES)
     language = None
 
     try:
@@ -303,7 +304,7 @@ def create_language_component(parent, language_code):
         language_name_node.text = language_code
     else:
         language_name_node.text = language.name
-        language_code_node = etree.SubElement(language_node, '{' + CMDP_NS + '}code', nsmap=CMD_NAMESPACES)
+        language_code_node = etree.SubElement(language_node, '{' + CMDP_NS_RECORD + '}code', nsmap=CMD_NAMESPACES)
         language_code_node.text = language.part3
 
 
@@ -349,6 +350,10 @@ def insert_metadata_info(parent):
         ''')
     parent.insert(len(parent), metadata_info)
 
+# ###################
+# Collection records
+# ###################
+
 
 def make_collection_record(template, collection_id, title, year_files):
     cmdi_file = deepcopy(template)
@@ -362,12 +367,24 @@ def make_collection_record(template, collection_id, title, year_files):
         logger.error("Expecting exactly one components root element")
         return None
     else:
-        insert_collection_resource_proxies(resource_proxies_list[0], year_files, collection_id)
+        collection_insert_resource_proxies(resource_proxies_list[0], year_files, collection_id)
+
+    # Component section
+    components_root = xpath(cmdi_file, f"/cmd:CMD/cmd:Components/cmdp_c:MetadataCollection")
+    if len(components_root) != 1:
+        logger.error("Expecting exactly one components root element")
+        return None
+    else:
+        # TODO: Filter EDM records???
+        # # load EDM metadata records
+        # edm_records = load_emd_records(records, metadata_dir)
+        # insert component content
+        collection_insert_component_content(components_root[0], title, sorted(list(year_files)))
 
     return cmdi_file
 
 
-def insert_collection_resource_proxies(resource_proxies_list, year_files, collection_id):
+def collection_insert_resource_proxies(resource_proxies_list, year_files, collection_id):
     # landing page
     insert_resource_proxy(resource_proxies_list, LANDING_PAGE_ID, "LandingPage", LANDING_PAGE_URL)
 
@@ -380,6 +397,47 @@ def insert_collection_resource_proxies(resource_proxies_list, year_files, collec
     # links to metadata records
     for year in sorted(year_files):
         insert_resource_proxy(resource_proxies_list, xml_id(year), "Metadata", year_files[year])
+
+
+def collection_insert_component_content(components_root, title, years):
+    # Title and description
+    collection_insert_title_and_description(components_root, title, years)
+    # # Resource type
+    # insert_keywords(components_root, edm_records)
+    # # Publisher
+    # insert_publisher(components_root, edm_records)
+    # # Language information
+    # insert_languages(components_root, edm_records)
+    # # Temporal coverage
+    # insert_temporal_coverage(components_root, year)
+    # # Countries
+    # insert_countries(components_root, edm_records)
+    # # Licence information
+    # insert_licences(components_root, edm_records)
+    # # Subresources
+    # insert_subresource_info(components_root, edm_records)
+    # TODO: subresource info for dumps (ALTO and EDM)
+    # Metadata information
+    insert_metadata_info(components_root)
+
+
+def collection_insert_title_and_description(parent, title, years):
+    # Add title info
+    title_info_node = etree.SubElement(parent, '{' + CMDP_NS_RECORD + '}TitleInfo', nsmap=CMD_NAMESPACES)
+    title_node = etree.SubElement(title_info_node, '{' + CMDP_NS_RECORD + '}title', nsmap=CMD_NAMESPACES)
+    title_node.text = f"{title}"
+
+    # Add description
+    description_info_node = etree.SubElement(parent, '{' + CMDP_NS_RECORD + '}Description', nsmap=CMD_NAMESPACES)
+    description_node = etree.SubElement(description_info_node, '{' + CMDP_NS_RECORD + '}description', nsmap=CMD_NAMESPACES)
+    description_node.text = f"Full text content aggregated from Europeana. " \
+                            f"Title: \"{title}\". " \
+                            f"Years: {', '.join(years)}."
+
+    # Add resource type ('Text')
+    resource_type_node = etree.SubElement(parent, '{' + CMDP_NS_RECORD + '}ResourceType', nsmap=CMD_NAMESPACES)
+    resource_type_label_node = etree.SubElement(resource_type_node, '{' + CMDP_NS_RECORD + '}label', nsmap=CMD_NAMESPACES)
+    resource_type_label_node.text = "Text"
 
 
 def make_edm_dump_ref(collection_id):

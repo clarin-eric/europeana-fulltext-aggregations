@@ -8,7 +8,8 @@ import json
 DEFAULT_OUTPUT_DIRECTORY = "./output"
 
 CMD_NS = 'http://www.clarin.eu/cmd/1'
-CMDP_NS = 'http://www.clarin.eu/cmd/1/profiles/clarin.eu:cr1:p_1633000337997'
+CMDP_NS_RECORD = 'http://www.clarin.eu/cmd/1/profiles/clarin.eu:cr1:p_1633000337997'
+CMDP_NS_COLLECTION_RECORD = 'http://www.clarin.eu/cmd/1/profiles/clarin.eu:cr1:p_1639731773869'
 
 EDM_NAMESPACES = {
     'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
@@ -20,7 +21,8 @@ EDM_NAMESPACES = {
 
 CMD_NAMESPACES = {
     'cmd': CMD_NS,
-    'cmdp': CMDP_NS
+    'cmdp': CMDP_NS_RECORD,
+    'cmdp_c': CMDP_NS_COLLECTION_RECORD
 }
 
 ALL_NAMESPACES = {**EDM_NAMESPACES, **CMD_NAMESPACES}
