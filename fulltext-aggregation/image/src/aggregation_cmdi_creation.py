@@ -12,10 +12,9 @@ from iso639 import languages
 from common import CMD_NS, CMDP_NS, CMD_NAMESPACES
 from common import xpath, get_unique_xpath_values
 from common import normalize_identifier, xml_id, is_valid_date, get_optional_env_var
+from env import COLLECTION_DISPLAY_NAME, LANDING_PAGE_URL
 
-COLLECTION_DISPLAY_NAME = get_optional_env_var('COLLECTION_DISPLAY_NAME', 'Europeana newspapers full-text')
 LANDING_PAGE_ID = 'landing_page'
-LANDING_PAGE_URL = get_optional_env_var('LANDING_PAGE_URL', 'https://pro.europeana.eu/page/iiif#download')
 EDM_DUMP_PROXY_ID = 'archive_edm'
 ALTO_DUMP_PROXY_ID = 'archive_alto'
 DUMP_MEDIA_TYPE = 'application/zip'

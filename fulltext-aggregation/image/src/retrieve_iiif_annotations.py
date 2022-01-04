@@ -4,12 +4,9 @@ from glom import glom, flatten, PathAccessError
 from multiprocessing import Pool
 
 from common import get_json_from_http
-from common import get_optional_env_var
+from env import IIIF_API_URL, THREAD_POOL_SIZE
 
 logger = logging.getLogger(__name__)
-
-IIIF_API_URL = get_optional_env_var('IIIF_API_URL', 'https://iiif.europeana.eu')
-THREAD_POOL_SIZE = int(get_optional_env_var('API_RETRIEVAL_THREAD_POOL_SIZE', '10'))
 
 
 def retrieve_annotation_refs(iiif_manifest_url, session):

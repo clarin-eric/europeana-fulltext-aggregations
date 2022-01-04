@@ -17,14 +17,11 @@ from common import normalize_issue_title, normalize_identifier, date_to_year, fi
 from common import get_optional_env_var, get_mandatory_env_var
 
 from common import ALL_NAMESPACES
+from env import THREAD_POOL_SIZE, IIIF_API_URL, RECORD_API_URL, RECORD_API_KEY
 
 logger = logging.getLogger(__name__)
 
-THREAD_POOL_SIZE = int(get_optional_env_var('FILE_PROCESSING_THREAD_POOL_SIZE', '10'))
-IIIF_API_URL = get_optional_env_var('IIIF_API_URL', 'https://iiif.europeana.eu')
 EDM_ID_PATTERN = re.compile(r'^[A-z]+://data.europeana.eu/item/([^/]+/[^/]+)$')
-RECORD_API_URL = get_optional_env_var('RECORD_API_URL', 'https://api.europeana.eu/record/v2')
-RECORD_API_KEY = get_mandatory_env_var('RECORD_API_KEY')
 
 
 def aggregate(collection_id, metadata_dir, output_dir):
