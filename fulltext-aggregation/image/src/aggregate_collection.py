@@ -5,7 +5,7 @@ import requests
 import time
 import re
 
-from glom import glom, PathAccessError
+from glom import glom, PathAccessError, flatten
 from lxml import etree
 from multiprocessing import Pool, Manager
 
@@ -224,9 +224,14 @@ def generate_cmdi_records(collection_id, index, metadata_dir, output_dir):
         logger.info(f"{len(files_for_years)} year records generated for title '{title}'")
 
         if len(files_for_years) > 1:
+            # join records from all years
+            title_records = {}
+            for year_records in years.values():
+                title_records.update(year_records)
             # Make a 'parent' record for the title that links to all years
             logger.info(f"Generating collection record for title '{title}'")
-            generate_collection_record(collection_id, title, files_for_years, output_dir, collection_template)
+            generate_collection_record(title_records, collection_id, title, files_for_years,
+                                       output_dir, metadata_dir, collection_template)
 
 
 def generate_cmdi_record(records, collection_id, title, year, output_dir, metadata_dir, template):
@@ -238,11 +243,11 @@ def generate_cmdi_record(records, collection_id, title, year, output_dir, metada
         return file_name
 
 
-def generate_collection_record(collection_id, title, year_files, output_dir, template):
+def generate_collection_record(input_records, collection_id, title, year_files, output_dir, metadata_dir, template):
     file_name = f"{filename_safe(title + '_collection')}.cmdi"
     file_path = f"{output_dir}/{file_name}"
     logger.debug(f"Generating metadata file {file_path}")
-    if cmdi_file := make_collection_record(template, collection_id, title, year_files):
+    if cmdi_file := make_collection_record(template, collection_id, title, year_files, input_records, metadata_dir):
         write_xml_tree_to_file(cmdi_file, file_path)
 
 

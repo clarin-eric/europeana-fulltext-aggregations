@@ -185,29 +185,29 @@ def insert_title_and_description(parent, title, year):
     resource_type_label_node.text = "Text"
 
 
-def insert_keywords(parent, edm_records):
+def insert_keywords(parent, edm_records, namespace=CMDP_NS_RECORD):
     # include dc:type values as keyword
     keywords = get_unique_xpath_values(edm_records, '/rdf:RDF/ore:Proxy/dc:type/text()')
     for keyword in keywords:
-        keyword_node = etree.SubElement(parent, '{' + CMDP_NS_RECORD + '}Keyword', nsmap=CMD_NAMESPACES)
-        label_node = etree.SubElement(keyword_node, '{' + CMDP_NS_RECORD + '}label', nsmap=CMD_NAMESPACES)
+        keyword_node = etree.SubElement(parent, '{' + namespace + '}Keyword', nsmap=CMD_NAMESPACES)
+        label_node = etree.SubElement(keyword_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
         label_node.text = keyword
 
 
-def insert_publisher(parent, edm_records):
+def insert_publisher(parent, edm_records, namespace=CMDP_NS_RECORD):
     publishers = get_unique_xpath_values(edm_records,
                                          '/rdf:RDF/ore:Aggregation/edm:dataProvider/text()'
                                          '|/rdf:RDF/ore:Aggregation/edm:provider/text()')
     for publisher in publishers:
-        keyword_node = etree.SubElement(parent, '{' + CMDP_NS_RECORD + '}Publisher', nsmap=CMD_NAMESPACES)
-        label_node = etree.SubElement(keyword_node, '{' + CMDP_NS_RECORD + '}name', nsmap=CMD_NAMESPACES)
+        keyword_node = etree.SubElement(parent, '{' + namespace + '}Publisher', nsmap=CMD_NAMESPACES)
+        label_node = etree.SubElement(keyword_node, '{' + namespace + '}name', nsmap=CMD_NAMESPACES)
         label_node.text = publisher
 
 
-def insert_languages(parent, edm_records):
+def insert_languages(parent, edm_records, namespace=CMDP_NS_RECORD):
     language_codes = get_unique_xpath_values(edm_records, '/rdf:RDF/ore:Proxy/dc:language/text()')
     for language_code in language_codes:
-        create_language_component(parent, language_code)
+        create_language_component(parent, language_code, namespace)
 
 
 def insert_temporal_coverage(parent, year):
@@ -225,29 +225,29 @@ def insert_temporal_coverage(parent, year):
     end_year.text = year
 
 
-def insert_countries(parent, edm_record):
+def insert_countries(parent, edm_record, namespace=CMDP_NS_RECORD):
     countries = rights_urls = get_unique_xpath_values(edm_record,
                                                       '/rdf:RDF/edm:EuropeanaAggregation/edm:country/text()')
     for country in countries:
-        geolocation_node = etree.SubElement(parent, '{' + CMDP_NS_RECORD + '}GeoLocation', nsmap=CMD_NAMESPACES)
-        label_node = etree.SubElement(geolocation_node, '{' + CMDP_NS_RECORD + '}label', nsmap=CMD_NAMESPACES)
+        geolocation_node = etree.SubElement(parent, '{' + namespace + '}GeoLocation', nsmap=CMD_NAMESPACES)
+        label_node = etree.SubElement(geolocation_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
         label_node.text = country
-        country_node = etree.SubElement(geolocation_node, '{' + CMDP_NS_RECORD + '}Country', nsmap=CMD_NAMESPACES)
-        country_label_node = etree.SubElement(country_node, '{' + CMDP_NS_RECORD + '}label', nsmap=CMD_NAMESPACES)
+        country_node = etree.SubElement(geolocation_node, '{' + namespace + '}Country', nsmap=CMD_NAMESPACES)
+        country_label_node = etree.SubElement(country_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
         country_label_node.text = country
 
 
-def insert_licences(parent, edm_records):
+def insert_licences(parent, edm_records, namespace=CMDP_NS_RECORD):
     rights_urls = get_unique_xpath_values(edm_records, '/rdf:RDF/ore:Aggregation/edm:rights/@rdf:resource')
     if len(rights_urls) > 0:
-        access_info_node = etree.SubElement(parent, '{' + CMDP_NS_RECORD + '}AccessInfo', nsmap=CMD_NAMESPACES)
+        access_info_node = etree.SubElement(parent, '{' + namespace + '}AccessInfo', nsmap=CMD_NAMESPACES)
         for rights_url in rights_urls:
-            licence_node = etree.SubElement(access_info_node, '{' + CMDP_NS_RECORD + '}Licence', nsmap=CMD_NAMESPACES)
-            identifier_node = etree.SubElement(licence_node, '{' + CMDP_NS_RECORD + '}identifier', nsmap=CMD_NAMESPACES)
+            licence_node = etree.SubElement(access_info_node, '{' + namespace + '}Licence', nsmap=CMD_NAMESPACES)
+            identifier_node = etree.SubElement(licence_node, '{' + namespace + '}identifier', nsmap=CMD_NAMESPACES)
             identifier_node.text = rights_url
-            label_node = etree.SubElement(licence_node, '{' + CMDP_NS_RECORD + '}label', nsmap=CMD_NAMESPACES)
+            label_node = etree.SubElement(licence_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
             label_node.text = rights_url
-            url_node = etree.SubElement(licence_node, '{' + CMDP_NS_RECORD + '}url', nsmap=CMD_NAMESPACES)
+            url_node = etree.SubElement(licence_node, '{' + namespace + '}url', nsmap=CMD_NAMESPACES)
             url_node.text = rights_url
 
 
@@ -286,9 +286,9 @@ def insert_subresource_info(components_root, edm_records):
                 label_node.text = issued_date
 
 
-def create_language_component(parent, language_code):
-    language_node = etree.SubElement(parent, '{' + CMDP_NS_RECORD + '}Language', nsmap=CMD_NAMESPACES)
-    language_name_node = etree.SubElement(language_node, '{' + CMDP_NS_RECORD + '}name', nsmap=CMD_NAMESPACES)
+def create_language_component(parent, language_code, namespace=CMDP_NS_RECORD):
+    language_node = etree.SubElement(parent, '{' + namespace + '}Language', nsmap=CMD_NAMESPACES)
+    language_name_node = etree.SubElement(language_node, '{' + namespace + '}name', nsmap=CMD_NAMESPACES)
     language = None
 
     try:
@@ -355,7 +355,7 @@ def insert_metadata_info(parent):
 # ###################
 
 
-def make_collection_record(template, collection_id, title, year_files):
+def make_collection_record(template, collection_id, title, year_files, input_record_map, metadata_dir):
     cmdi_file = deepcopy(template)
 
     # Metadata headers
@@ -375,11 +375,10 @@ def make_collection_record(template, collection_id, title, year_files):
         logger.error("Expecting exactly one components root element")
         return None
     else:
-        # TODO: Filter EDM records???
-        # # load EDM metadata records
-        # edm_records = load_emd_records(records, metadata_dir)
+        # load EDM metadata records
+        edm_records = load_emd_records(input_record_map, metadata_dir)
         # insert component content
-        collection_insert_component_content(components_root[0], title, sorted(list(year_files)))
+        collection_insert_component_content(components_root[0], title, sorted(list(year_files)), edm_records)
 
     return cmdi_file
 
@@ -399,21 +398,21 @@ def collection_insert_resource_proxies(resource_proxies_list, year_files, collec
         insert_resource_proxy(resource_proxies_list, xml_id(year), "Metadata", year_files[year])
 
 
-def collection_insert_component_content(components_root, title, years):
+def collection_insert_component_content(components_root, title, years, input_records):
     # Title and description
     collection_insert_title_and_description(components_root, title, years)
-    # # Resource type
-    # insert_keywords(components_root, edm_records)
-    # # Publisher
-    # insert_publisher(components_root, edm_records)
-    # # Language information
-    # insert_languages(components_root, edm_records)
+    # Resource type
+    insert_keywords(components_root, input_records, CMDP_NS_COLLECTION_RECORD)
+    # Publisher
+    insert_publisher(components_root, input_records, CMDP_NS_COLLECTION_RECORD)
+    # Language information
+    insert_languages(components_root, input_records, CMDP_NS_COLLECTION_RECORD)
     # # Temporal coverage
     # insert_temporal_coverage(components_root, year)
-    # # Countries
-    # insert_countries(components_root, edm_records)
-    # # Licence information
-    # insert_licences(components_root, edm_records)
+    # Countries
+    insert_countries(components_root, input_records, CMDP_NS_COLLECTION_RECORD)
+    # Licence information
+    insert_licences(components_root, input_records, CMDP_NS_COLLECTION_RECORD)
     # # Subresources
     # insert_subresource_info(components_root, edm_records)
     # TODO: subresource info for dumps (ALTO and EDM)
