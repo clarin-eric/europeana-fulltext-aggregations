@@ -3,6 +3,8 @@ from common import get_optional_env_var, get_mandatory_env_var
 # Mandatory variables
 RECORD_API_KEY = get_mandatory_env_var(
     'RECORD_API_KEY')
+CMDI_RECORDS_BASE_URL = get_mandatory_env_var(
+    'CMDI_RECORDS_BASE_URL')
 
 # Optional variables
 

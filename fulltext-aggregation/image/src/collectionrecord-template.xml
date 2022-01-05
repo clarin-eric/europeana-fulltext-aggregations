@@ -9,7 +9,7 @@
     <cmd:Header>
         <cmd:MdCreator></cmd:MdCreator>
         <cmd:MdCreationDate></cmd:MdCreationDate>
-<!--        <cmd:MdSelfLink>http://www.oxygenxml.com/</cmd:MdSelfLink>-->
+        <cmd:MdSelfLink></cmd:MdSelfLink>
         <cmd:MdProfile>clarin.eu:cr1:p_1639731773869</cmd:MdProfile>
         <cmd:MdCollectionDisplayName></cmd:MdCollectionDisplayName>
     </cmd:Header>

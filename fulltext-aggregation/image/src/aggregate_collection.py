@@ -238,7 +238,7 @@ def generate_cmdi_record(records, collection_id, title, year, output_dir, metada
     file_name = f"{filename_safe(title + '_' + year)}.cmdi"
     file_path = f"{output_dir}/{file_name}"
     logger.debug(f"Generating metadata file {file_path}")
-    if cmdi_file := make_cmdi_record(template, collection_id, title, year, records, metadata_dir):
+    if cmdi_file := make_cmdi_record(file_name, template, collection_id, title, year, records, metadata_dir):
         write_xml_tree_to_file(cmdi_file, file_path)
         return file_name
 
@@ -247,7 +247,7 @@ def generate_collection_record(input_records, collection_id, title, year_files, 
     file_name = f"{filename_safe(title + '_collection')}.cmdi"
     file_path = f"{output_dir}/{file_name}"
     logger.debug(f"Generating metadata file {file_path}")
-    if cmdi_file := make_collection_record(template, collection_id, title, year_files, input_records, metadata_dir):
+    if cmdi_file := make_collection_record(file_name, template, collection_id, title, year_files, input_records, metadata_dir):
         write_xml_tree_to_file(cmdi_file, file_path)
 
 

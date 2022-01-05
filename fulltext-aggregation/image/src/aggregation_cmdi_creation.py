@@ -12,7 +12,7 @@ from iso639 import languages
 from common import CMD_NS, CMDP_NS_RECORD, CMDP_NS_COLLECTION_RECORD, CMD_NAMESPACES
 from common import xpath, get_unique_xpath_values
 from common import normalize_identifier, xml_id, is_valid_date, get_optional_env_var
-from env import COLLECTION_DISPLAY_NAME, LANDING_PAGE_URL
+from env import COLLECTION_DISPLAY_NAME, LANDING_PAGE_URL, CMDI_RECORDS_BASE_URL
 
 LANDING_PAGE_ID = 'landing_page'
 EDM_DUMP_PROXY_ID = 'archive_edm'
@@ -34,11 +34,11 @@ def make_collection_record_template():
     return etree.parse(f"{script_path}/{COLLECTION_RECORD_TEMPLATE_FILE}")
 
 
-def make_cmdi_record(template, collection_id, title, year, records, metadata_dir):
+def make_cmdi_record(record_file_name, template, collection_id, title, year, records, metadata_dir):
     cmdi_file = deepcopy(template)
 
     # Metadata headers
-    set_metadata_headers(cmdi_file)
+    set_metadata_headers(cmdi_file, collection_id, record_file_name)
 
     # Resource proxies
     resource_proxies_list = xpath(cmdi_file, '/cmd:CMD/cmd:Resources/cmd:ResourceProxyList')
@@ -81,7 +81,7 @@ def load_emd_records(records_map, metadata_dir):
     return edm_records
 
 
-def set_metadata_headers(doc):
+def set_metadata_headers(doc, collection_id, record_file_name):
     creator_header = xpath(doc, '/cmd:CMD/cmd:Header/cmd:MdCreator')
     if creator_header:
         creator_header[0].text = os.path.basename(__file__)
@@ -90,7 +90,9 @@ def set_metadata_headers(doc):
     if creation_date_header:
         creation_date_header[0].text = today_string()
 
-    # TODO: SelfLink??
+    selflink_header = xpath(doc, '/cmd:CMD/cmd:Header/cmd:MdSelfLink')
+    if creation_date_header:
+        selflink_header[0].text = f"{CMDI_RECORDS_BASE_URL}/{collection_id}/{record_file_name}"
 
     collection_name_header = xpath(doc, '/cmd:CMD/cmd:Header/cmd:MdCollectionDisplayName')
     if collection_name_header:
@@ -361,11 +363,11 @@ def insert_metadata_info(parent):
 # ###################
 
 
-def make_collection_record(template, collection_id, title, year_files, input_record_map, metadata_dir):
+def make_collection_record(file_name, template, collection_id, title, year_files, input_record_map, metadata_dir):
     cmdi_file = deepcopy(template)
 
     # Metadata headers
-    set_metadata_headers(cmdi_file)
+    set_metadata_headers(cmdi_file, collection_id, file_name)
 
     # Resource proxies
     resource_proxies_list = xpath(cmdi_file, '/cmd:CMD/cmd:Resources/cmd:ResourceProxyList')
@@ -401,7 +403,9 @@ def collection_insert_resource_proxies(resource_proxies_list, year_files, collec
 
     # links to metadata records
     for year in sorted(year_files):
-        insert_resource_proxy(resource_proxies_list, xml_id(year), "Metadata", year_files[year])
+        file_name = year_files[year]
+        ref = f"{CMDI_RECORDS_BASE_URL}/{collection_id}/{file_name}"
+        insert_resource_proxy(resource_proxies_list, xml_id(year), "Metadata", ref)
 
 
 def collection_insert_component_content(components_root, title, years, input_records):

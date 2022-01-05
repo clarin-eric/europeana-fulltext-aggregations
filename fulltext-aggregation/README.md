@@ -6,7 +6,7 @@ bash build.sh # only before first run or after an update of the sources
 
 cp .env-template .env
 vi .env # or editor of choice :)
-## configure a local output directory and other settings
+## configure a local output directory, remote URL for records and other settings
 
 COLLECTION_ID=...... # for instance '9200396'
 
