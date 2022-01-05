@@ -408,17 +408,17 @@ def collection_insert_resource_proxies(resource_proxies_list, year_files, collec
         insert_resource_proxy(resource_proxies_list, xml_id(year), "Metadata", ref)
 
 
-def collection_insert_component_content(components_root, title, years, input_records):
+def collection_insert_component_content(components_root, title, sorted_years, input_records):
     # Title and description
-    collection_insert_title_and_description(components_root, title, years)
+    collection_insert_title_and_description(components_root, title, sorted_years)
     # Resource type
     insert_keywords(components_root, input_records, CMDP_NS_COLLECTION_RECORD)
     # Publisher
     insert_publisher(components_root, input_records, CMDP_NS_COLLECTION_RECORD)
     # Language information
     insert_languages(components_root, input_records, CMDP_NS_COLLECTION_RECORD)
-    # # Temporal coverage
-    # insert_temporal_coverage(components_root, year)
+    # Temporal coverage
+    collection_insert_temporal_coverage(components_root, sorted_years[0], sorted_years[-1])
     # Countries
     insert_countries(components_root, input_records, CMDP_NS_COLLECTION_RECORD)
     # Licence information
@@ -453,6 +453,21 @@ def collection_insert_title_and_description(parent, title, years):
     resource_type_label_node = etree.SubElement(resource_type_node, '{' + CMDP_NS_COLLECTION_RECORD + '}label',
                                                 nsmap=CMD_NAMESPACES)
     resource_type_label_node.text = "Text"
+
+
+def collection_insert_temporal_coverage(parent, year_lower, year_higher):
+    temporal_coverage_node = etree.SubElement(parent, '{' + CMDP_NS_COLLECTION_RECORD + '}TemporalCoverage',
+                                              nsmap=CMD_NAMESPACES)
+    label_node = etree.SubElement(temporal_coverage_node, '{' + CMDP_NS_COLLECTION_RECORD + '}label', nsmap=CMD_NAMESPACES)
+    label_node.text = f"{year_lower} - {year_higher}"
+    start_year = etree.SubElement(etree.SubElement(
+        temporal_coverage_node, '{' + CMDP_NS_COLLECTION_RECORD + '}Start', nsmap=CMD_NAMESPACES),
+        '{' + CMDP_NS_COLLECTION_RECORD + '}year', nsmap=CMD_NAMESPACES)
+    start_year.text = year_lower
+    end_year = etree.SubElement(etree.SubElement(
+        temporal_coverage_node, '{' + CMDP_NS_COLLECTION_RECORD + '}End', nsmap=CMD_NAMESPACES),
+        '{' + CMDP_NS_COLLECTION_RECORD + '}year', nsmap=CMD_NAMESPACES)
+    end_year.text = year_higher
 
 
 def make_edm_dump_ref(collection_id):
