@@ -486,24 +486,26 @@ def collection_insert_temporal_coverage(parent, year_lower, year_higher):
     end_year.text = year_higher
 
 
-def collection_insert_subresource_info(parent, title, year_files):
-    insert_dump_subresource_info(parent, CMDP_NS_COLLECTION_RECORD)
+def collection_insert_subresource_info(parent, title, year_files, namespace=CMDP_NS_COLLECTION_RECORD):
+    insert_dump_subresource_info(parent, namespace)
     # Subresource info for metadata links
     for year in sorted(year_files):
         file = year_files[year]
 
         subresource_node = etree.SubElement(parent,
-                                            '{' + CMDP_NS_COLLECTION_RECORD + '}Subresource',
-                                            nsmap=CMD_NAMESPACES)
+                                            '{' + namespace + '}Subresource', nsmap=CMD_NAMESPACES)
         subresource_description_node = etree.SubElement(subresource_node,
-                                                        '{' + CMDP_NS_COLLECTION_RECORD + '}SubresourceDescription',
+                                                        '{' + namespace + '}SubresourceDescription',
                                                         nsmap=CMD_NAMESPACES)
         subresource_node.attrib['{' + CMD_NS + '}ref'] = xml_id(year)
         label_node = etree.SubElement(subresource_description_node,
-                                      '{' + CMDP_NS_COLLECTION_RECORD + '}label',
-                                      nsmap=CMD_NAMESPACES)
+                                      '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
         label_node.text = f"{title} - {year}"
-        # TODO add temporal coverage
+        # Temporal coverage
+        temporal_coverage_node = etree.SubElement(subresource_description_node,
+                                                  '{' + namespace + '}TemporalCoverage', nsmap=CMD_NAMESPACES)
+        label_node = etree.SubElement(temporal_coverage_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
+        label_node.text = year
 
 
 def make_edm_dump_ref(collection_id):
