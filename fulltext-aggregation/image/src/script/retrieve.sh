@@ -55,7 +55,7 @@ download_and_unpack() {
 
     echo "$(date) - Decompressing ${FILE} in ${DIR}"
     mkdir -p "${DIR}" && cd "${DIR}"
-    if 7z x "${FILE}"; then
+    if 7z x "${FILE}" -aoa; then
       # Move all files in target directory 'root'
       find "${DIR}" -mindepth 2 -type f -exec "${MV_COMMAND:-mv}" -t "${DIR}" -i '{}' +
       rm "${FILE}"

@@ -171,7 +171,7 @@ def insert_component_content(components_root, title, year, edm_records):
 def insert_title_and_description(parent, title, year):
     # Add title info
     title_info_node = etree.SubElement(parent, '{' + CMDP_NS_RECORD + '}TitleInfo', nsmap=CMD_NAMESPACES)
-    title_node = etree.SubElement(title_info_node, '{' + CMDP_NS_COLLECTION_RECORD + '}title', nsmap=CMD_NAMESPACES)
+    title_node = etree.SubElement(title_info_node, '{' + CMDP_NS_RECORD + '}title', nsmap=CMD_NAMESPACES)
     title_node.text = f"{title} - {year}"
 
     # Add description
