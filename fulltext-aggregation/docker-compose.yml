@@ -5,6 +5,7 @@ services:
     build: ./image
     environment:
       - RECORD_API_KEY=${RECORD_API_KEY:?Europeana API key must be set}
+      - CMDI_RECORDS_BASE_URL=${CMDI_RECORDS_BASE_URL:?Records base URL be set}
       - METADATA_PATH=/input/metadata
       - FULLTEXT_PATH=/input/fulltext
       - OUTPUT_DIR=/output
