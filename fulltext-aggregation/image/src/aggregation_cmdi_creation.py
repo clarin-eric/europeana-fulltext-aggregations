@@ -254,44 +254,59 @@ def insert_licences(parent, edm_records, namespace=CMDP_NS_RECORD):
             url_node.text = rights_url
 
 
-def insert_subresource_info(components_root, edm_records):
+def insert_subresource_info(components_root, edm_records, namespace=CMDP_NS_RECORD):
+    insert_dump_subresource_info(components_root, namespace)
     for record in edm_records:
         identifiers = get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:identifier/text()')
         language_codes = get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:language/text()')
 
-        subresource_node = etree.SubElement(components_root, '{' + CMDP_NS_RECORD + '}Subresource',
+        subresource_node = etree.SubElement(components_root, '{' + namespace + '}Subresource',
                                             nsmap=CMD_NAMESPACES)
         subresource_description_node = etree.SubElement(subresource_node,
-                                                        '{' + CMDP_NS_RECORD + '}SubresourceDescription',
+                                                        '{' + namespace + '}SubresourceDescription',
                                                         nsmap=CMD_NAMESPACES)
         for title in get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:title/text()'):
-            label_node = etree.SubElement(subresource_description_node, '{' + CMDP_NS_RECORD + '}label',
+            label_node = etree.SubElement(subresource_description_node, '{' + namespace + '}label',
                                           nsmap=CMD_NAMESPACES)
             label_node.text = title
         # for description in get_unique_xpath_values([record], '/rdf:RDF/edm:ProvidedCHO/dcterms:extent/text()'
         #                                                      '|/rdf:RDF/edm:ProvidedCHO/dc:type/text()'):
         #     description_node = etree.SubElement(subresource_description_node,
-        #                                         '{' + CMDP_NS_RECORD + '}description', nsmap=CMD_NAMESPACES)
+        #                                         '{' + namespace + '}description', nsmap=CMD_NAMESPACES)
         #     description_node.text = description
         if len(identifiers) > 0:
             subresource_node.attrib['{' + CMD_NS + '}ref'] = xml_id(normalize_identifier(identifiers[0]) + '_1')
             identification_info_node = etree.SubElement(subresource_description_node,
-                                                        '{' + CMDP_NS_RECORD + '}IdentificationInfo',
+                                                        '{' + namespace + '}IdentificationInfo',
                                                         nsmap=CMD_NAMESPACES)
             for identifier in identifiers:
-                identifier_node = etree.SubElement(identification_info_node, '{' + CMDP_NS_RECORD + '}identifier',
+                identifier_node = etree.SubElement(identification_info_node, '{' + namespace + '}identifier',
                                                    nsmap=CMD_NAMESPACES)
                 identifier_node.text = identifier
         for language_code in language_codes:
-            create_language_component(subresource_description_node, language_code)
+            create_language_component(subresource_description_node, language_code, namespace)
         for issued_date in get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dcterms:issued/text()'):
             if is_valid_date(issued_date):
                 temporal_coverage_node = etree.SubElement(subresource_description_node,
-                                                          '{' + CMDP_NS_RECORD + '}TemporalCoverage',
+                                                          '{' + namespace + '}TemporalCoverage',
                                                           nsmap=CMD_NAMESPACES)
-                label_node = etree.SubElement(temporal_coverage_node, '{' + CMDP_NS_RECORD + '}label',
+                label_node = etree.SubElement(temporal_coverage_node, '{' + namespace + '}label',
                                               nsmap=CMD_NAMESPACES)
                 label_node.text = issued_date
+
+
+def insert_dump_subresource_info(parent, namespace=CMDP_NS_RECORD):
+    for dump in [(EDM_DUMP_PROXY_ID,
+                  'Archive containing full text content in EDM format which includes this title'),
+                 (ALTO_DUMP_PROXY_ID,
+                  'Archive containing full text content in ALTO format which includes this title')]:
+        subresource_node = etree.SubElement(parent, '{' + namespace + '}Subresource', nsmap=CMD_NAMESPACES)
+        subresource_description_node = etree.SubElement(subresource_node,
+                                                        '{' + namespace + '}SubresourceDescription',
+                                                        nsmap=CMD_NAMESPACES)
+        subresource_node.attrib['{' + CMD_NS + '}ref'] = dump[0]
+        label_node = etree.SubElement(subresource_description_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
+        label_node.text = dump[1]
 
 
 def create_language_component(parent, language_code, namespace=CMDP_NS_RECORD):
@@ -386,7 +401,8 @@ def make_collection_record(file_name, template, collection_id, title, year_files
         # load EDM metadata records
         edm_records = load_emd_records(input_record_map, metadata_dir)
         # insert component content
-        collection_insert_component_content(components_root[0], title, sorted(list(year_files)), edm_records)
+        collection_insert_component_content(components_root[0], title, sorted(list(year_files)),
+                                            year_files, edm_records)
 
     return cmdi_file
 
@@ -408,7 +424,7 @@ def collection_insert_resource_proxies(resource_proxies_list, year_files, collec
         insert_resource_proxy(resource_proxies_list, xml_id(year), "Metadata", ref)
 
 
-def collection_insert_component_content(components_root, title, sorted_years, input_records):
+def collection_insert_component_content(components_root, title, sorted_years, year_files, input_records):
     # Title and description
     collection_insert_title_and_description(components_root, title, sorted_years)
     # Resource type
@@ -424,7 +440,7 @@ def collection_insert_component_content(components_root, title, sorted_years, in
     # Licence information
     insert_licences(components_root, input_records, CMDP_NS_COLLECTION_RECORD)
     # # Subresources
-    # insert_subresource_info(components_root, edm_records)
+    collection_insert_subresource_info(components_root, title, year_files)
     # TODO: subresource info for dumps (ALTO and EDM)
     # Metadata information
     insert_metadata_info(components_root)
@@ -468,6 +484,26 @@ def collection_insert_temporal_coverage(parent, year_lower, year_higher):
         temporal_coverage_node, '{' + CMDP_NS_COLLECTION_RECORD + '}End', nsmap=CMD_NAMESPACES),
         '{' + CMDP_NS_COLLECTION_RECORD + '}year', nsmap=CMD_NAMESPACES)
     end_year.text = year_higher
+
+
+def collection_insert_subresource_info(parent, title, year_files):
+    insert_dump_subresource_info(parent, CMDP_NS_COLLECTION_RECORD)
+    # Subresource info for metadata links
+    for year in sorted(year_files):
+        file = year_files[year]
+
+        subresource_node = etree.SubElement(parent,
+                                            '{' + CMDP_NS_COLLECTION_RECORD + '}Subresource',
+                                            nsmap=CMD_NAMESPACES)
+        subresource_description_node = etree.SubElement(subresource_node,
+                                                        '{' + CMDP_NS_COLLECTION_RECORD + '}SubresourceDescription',
+                                                        nsmap=CMD_NAMESPACES)
+        subresource_node.attrib['{' + CMD_NS + '}ref'] = xml_id(year)
+        label_node = etree.SubElement(subresource_description_node,
+                                      '{' + CMDP_NS_COLLECTION_RECORD + '}label',
+                                      nsmap=CMD_NAMESPACES)
+        label_node.text = f"{title} - {year}"
+        # TODO add temporal coverage
 
 
 def make_edm_dump_ref(collection_id):
