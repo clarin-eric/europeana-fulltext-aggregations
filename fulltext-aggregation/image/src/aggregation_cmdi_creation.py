@@ -310,7 +310,7 @@ def create_language_component(parent, language_code, namespace=CMDP_NS_RECORD):
         language_name_node.text = language_code
     else:
         language_name_node.text = language.name
-        language_code_node = etree.SubElement(language_node, '{' + CMDP_NS_RECORD + '}code', nsmap=CMD_NAMESPACES)
+        language_code_node = etree.SubElement(language_node, '{' + namespace + '}code', nsmap=CMD_NAMESPACES)
         language_code_node.text = language.part3
 
 
