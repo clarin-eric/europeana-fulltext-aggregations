@@ -257,45 +257,53 @@ def insert_licences(parent, edm_records, namespace=CMDP_NS_RECORD):
             url_node.text = rights_url
 
 
-def insert_subresource_info(components_root, edm_records, labeled_refs, namespace=CMDP_NS_RECORD):
+def insert_subresource_info(components_root, edm_records, labeled_refs_dict, namespace=CMDP_NS_RECORD):
     insert_dump_subresource_info(components_root, namespace)
+    # info for annotations (per record)
     for record in edm_records:
         identifiers = get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:identifier/text()')
-        language_codes = get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:language/text()')
+        for identifier in identifiers:
+            normalized_id = normalize_identifier(identifier)
+            # get record (annotation ref, label) tuple from dictionary
+            labeled_refs = labeled_refs_dict.get(normalized_id, None)
+            if labeled_refs is not None:
+                index = 0
+                # one resource proxy per (ref, label) tuple
+                for labeled_ref in labeled_refs:
+                    index += 1
+                    insert_annotation_subresource_info(components_root, record, identifier, normalized_id,
+                                                       labeled_ref, index, namespace)
 
-        subresource_node = etree.SubElement(components_root, '{' + namespace + '}Subresource',
-                                            nsmap=CMD_NAMESPACES)
-        subresource_description_node = etree.SubElement(subresource_node,
-                                                        '{' + namespace + '}SubresourceDescription',
-                                                        nsmap=CMD_NAMESPACES)
-        for title in get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:title/text()'):
-            label_node = etree.SubElement(subresource_description_node, '{' + namespace + '}label',
-                                          nsmap=CMD_NAMESPACES)
-            label_node.text = title
-        # for description in get_unique_xpath_values([record], '/rdf:RDF/edm:ProvidedCHO/dcterms:extent/text()'
-        #                                                      '|/rdf:RDF/edm:ProvidedCHO/dc:type/text()'):
-        #     description_node = etree.SubElement(subresource_description_node,
-        #                                         '{' + namespace + '}description', nsmap=CMD_NAMESPACES)
-        #     description_node.text = description
-        if len(identifiers) > 0:
-            subresource_node.attrib['{' + CMD_NS + '}ref'] = xml_id(normalize_identifier(identifiers[0]) + '_1')
-            identification_info_node = etree.SubElement(subresource_description_node,
-                                                        '{' + namespace + '}IdentificationInfo',
-                                                        nsmap=CMD_NAMESPACES)
-            for identifier in identifiers:
-                identifier_node = etree.SubElement(identification_info_node, '{' + namespace + '}identifier',
-                                                   nsmap=CMD_NAMESPACES)
-                identifier_node.text = identifier
-        for language_code in language_codes:
-            create_language_component(subresource_description_node, language_code, namespace)
-        for issued_date in get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dcterms:issued/text()'):
-            if is_valid_date(issued_date):
-                temporal_coverage_node = etree.SubElement(subresource_description_node,
-                                                          '{' + namespace + '}TemporalCoverage',
-                                                          nsmap=CMD_NAMESPACES)
-                label_node = etree.SubElement(temporal_coverage_node, '{' + namespace + '}label',
-                                              nsmap=CMD_NAMESPACES)
-                label_node.text = issued_date
+
+def insert_annotation_subresource_info(parent, record, identifier, normalized_id, labeled_ref, index, namespace):
+    subresource_node = etree.SubElement(parent, '{' + namespace + '}Subresource', nsmap=CMD_NAMESPACES)
+    # cmd:ref attribute
+    subresource_node.attrib['{' + CMD_NS + '}ref'] = make_ref_xml_id(normalized_id, index)
+
+    subresource_description_node = etree.SubElement(subresource_node,
+                                                    '{' + namespace + '}SubresourceDescription',
+                                                    nsmap=CMD_NAMESPACES)
+
+    # title info
+    for title in get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:title/text()'):
+        label_node = etree.SubElement(subresource_description_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
+        label_node.text = f"{title} - {labeled_ref[1]}"
+
+    # identification info
+    identification_info_node = etree.SubElement(subresource_description_node,
+                                                '{' + namespace + '}IdentificationInfo',
+                                                nsmap=CMD_NAMESPACES)
+    identifier_node = etree.SubElement(identification_info_node, '{' + namespace + '}identifier', nsmap=CMD_NAMESPACES)
+    identifier_node.text = identifier
+
+    # subresource specific temporal coverage (issue date)
+    for issued_date in get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dcterms:issued/text()'):
+        if is_valid_date(issued_date):
+            temporal_coverage_node = etree.SubElement(subresource_description_node,
+                                                      '{' + namespace + '}TemporalCoverage',
+                                                      nsmap=CMD_NAMESPACES)
+            label_node = etree.SubElement(temporal_coverage_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
+            label_node.text = issued_date
 
 
 def insert_dump_subresource_info(parent, namespace=CMDP_NS_RECORD):
