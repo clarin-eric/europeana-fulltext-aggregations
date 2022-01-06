@@ -111,29 +111,28 @@ def insert_resource_proxies(resource_proxies_list, collection_id, records):
 
     # full text resources from IIIF API
     # 'records' is a map identifer -> {file, manifest_urls[]}
-    fulltext_ref_count = 0
+    refs = []
     with requests.Session() as session:
         for identifier in records:
-            index = 0
             manifest_urls = records[identifier].get('manifest_urls', None)
             if manifest_urls is None:
                 logger.warning(f"No manifest URLs specified for record {identifier}")
             else:
-                refs = retrieve_iiif_annotation_refs(manifest_urls, session)
-                for ref in refs:
-                    if ref is not None:
-                        index += 1
-                        insert_resource_proxy(resource_proxies_list, xml_id(f"{identifier}_{index}"), "Resource", ref)
-            fulltext_ref_count += index
+                refs = [ref for ref in retrieve_iiif_annotation_refs(manifest_urls, session) if ref is not None]
 
-    return fulltext_ref_count > 0
+    index = 0
+    for ref in refs:
+        index += 1
+        insert_resource_proxy(resource_proxies_list, xml_id(f"{identifier}_{index}"), "Resource", ref[0])
+
+    return len(refs) > 0
 
 
 def retrieve_iiif_annotation_refs(manifest_urls, session):
-    refs = []
+    labeled_refs = []
     for url in manifest_urls:
-        refs += retrieve_iiif_annotations.retrieve_annotation_refs(url, session)
-    return refs
+        labeled_refs += retrieve_iiif_annotations.retrieve_annotation_refs(url, session)
+    return labeled_refs
 
 
 def insert_resource_proxy(parent, proxy_id, resource_type, ref, media_type=None):
