@@ -5,9 +5,10 @@ import requests
 import retrieve_iiif_annotations
 
 from copy import deepcopy
-from lxml import etree
 from datetime import date
+from glom import flatten
 from iso639 import languages
+from lxml import etree
 
 from common import CMD_NS, CMDP_NS_RECORD, CMDP_NS_COLLECTION_RECORD, CMD_NAMESPACES
 from common import xpath, get_unique_xpath_values
@@ -37,6 +38,12 @@ def make_collection_record_template():
 def make_cmdi_record(record_file_name, template, collection_id, title, year, records, metadata_dir):
     cmdi_file = deepcopy(template)
 
+    # get full text resource references with labels from IIIF API, grouped per record identifier
+    labeled_refs = retrieve_iiif_annotation_refs(records)
+    if labeled_refs is None or len(labeled_refs) == 0:
+        logger.warning(f"Skipping creation of record for '{title} - {year}': no full text resources to refer to")
+        return None
+
     # Metadata headers
     set_metadata_headers(cmdi_file, collection_id, record_file_name)
 
@@ -46,10 +53,7 @@ def make_cmdi_record(record_file_name, template, collection_id, title, year, rec
         logger.error("Expecting exactly one components root element")
         return None
     else:
-        fulltext_refs_inserted = insert_resource_proxies(resource_proxies_list[0], collection_id, records)
-        if not fulltext_refs_inserted:
-            logger.warning(f"Skipping creation of record for '{title} - {year}': no full text resources to refer to")
-            return None
+        insert_resource_proxies(resource_proxies_list[0], collection_id, labeled_refs)
 
     # Component section
     components_root = xpath(cmdi_file, f"/cmd:CMD/cmd:Components/cmdp:TextResource")
@@ -60,7 +64,7 @@ def make_cmdi_record(record_file_name, template, collection_id, title, year, rec
         # load EDM metadata records
         edm_records = load_emd_records(records, metadata_dir)
         # insert component content
-        insert_component_content(components_root[0], title, year, edm_records)
+        insert_component_content(components_root[0], title, year, edm_records, labeled_refs)
 
     return cmdi_file
 
@@ -99,7 +103,7 @@ def set_metadata_headers(doc, collection_id, record_file_name):
         collection_name_header[0].text = COLLECTION_DISPLAY_NAME
 
 
-def insert_resource_proxies(resource_proxies_list, collection_id, records):
+def insert_resource_proxies(resource_proxies_list, collection_id, labeled_refs):
     # landing page
     insert_resource_proxy(resource_proxies_list, LANDING_PAGE_ID, "LandingPage", LANDING_PAGE_URL)
 
@@ -109,29 +113,30 @@ def insert_resource_proxies(resource_proxies_list, collection_id, records):
     insert_resource_proxy(resource_proxies_list, ALTO_DUMP_PROXY_ID, "Resource",
                           make_alto_dump_ref(collection_id), DUMP_MEDIA_TYPE)
 
-    # full text resources from IIIF API
-    # 'records' is a map identifer -> {file, manifest_urls[]}
-    refs = []
+    for record_id in labeled_refs:
+        record_refs = labeled_refs[record_id]
+        index = 0
+        for l_ref in record_refs:
+            index += 1
+            # ref is a tuple (ref, label)
+            ref = l_ref[0]
+            insert_resource_proxy(resource_proxies_list, make_ref_xml_id(record_id, index), "Resource", ref)
+
+
+def retrieve_iiif_annotation_refs(records):
+    # 'records' is a map identifer -> {file, [(ref, label)]}
+    labeled_refs = {}
     with requests.Session() as session:
         for identifier in records:
             manifest_urls = records[identifier].get('manifest_urls', None)
             if manifest_urls is None:
                 logger.warning(f"No manifest URLs specified for record {identifier}")
             else:
-                refs = [ref for ref in retrieve_iiif_annotation_refs(manifest_urls, session) if ref is not None]
+                refs = [retrieve_iiif_annotations.retrieve_annotation_refs(url, session) for url in manifest_urls]
+                url_labeled_refs = [ref for ref in flatten(refs) if ref is not None]
 
-    index = 0
-    for ref in refs:
-        index += 1
-        insert_resource_proxy(resource_proxies_list, xml_id(f"{identifier}_{index}"), "Resource", ref[0])
-
-    return len(refs) > 0
-
-
-def retrieve_iiif_annotation_refs(manifest_urls, session):
-    labeled_refs = []
-    for url in manifest_urls:
-        labeled_refs += retrieve_iiif_annotations.retrieve_annotation_refs(url, session)
+                if len(url_labeled_refs) > 0:
+                    labeled_refs[identifier] = url_labeled_refs
     return labeled_refs
 
 
@@ -147,7 +152,7 @@ def insert_resource_proxy(parent, proxy_id, resource_type, ref, media_type=None)
         resource_type_node.attrib['mimetype'] = media_type
 
 
-def insert_component_content(components_root, title, year, edm_records):
+def insert_component_content(components_root, title, year, edm_records, labeled_refs):
     # Title and description
     insert_title_and_description(components_root, title, year)
     # Resource type
@@ -163,8 +168,7 @@ def insert_component_content(components_root, title, year, edm_records):
     # Licence information
     insert_licences(components_root, edm_records)
     # Subresources
-    insert_subresource_info(components_root, edm_records)
-    # TODO: subresource info for dumps (ALTO and EDM)
+    insert_subresource_info(components_root, edm_records, labeled_refs)
     # Metadata information
     insert_metadata_info(components_root)
 
@@ -253,7 +257,7 @@ def insert_licences(parent, edm_records, namespace=CMDP_NS_RECORD):
             url_node.text = rights_url
 
 
-def insert_subresource_info(components_root, edm_records, namespace=CMDP_NS_RECORD):
+def insert_subresource_info(components_root, edm_records, labeled_refs, namespace=CMDP_NS_RECORD):
     insert_dump_subresource_info(components_root, namespace)
     for record in edm_records:
         identifiers = get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:identifier/text()')
@@ -513,6 +517,10 @@ def make_edm_dump_ref(collection_id):
 
 def make_alto_dump_ref(collection_id):
     return f"ftp://download.europeana.eu/newspapers/fulltext/alto/{collection_id}.zip"
+
+
+def make_ref_xml_id(record_id,index):
+    return xml_id(f"{record_id}_anno{index}")
 
 
 def today_string():
