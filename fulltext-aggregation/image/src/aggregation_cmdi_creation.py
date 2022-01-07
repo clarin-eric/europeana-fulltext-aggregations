@@ -289,12 +289,12 @@ def insert_annotation_subresource_info(parent, record, identifier, normalized_id
         label_node = etree.SubElement(subresource_description_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
         label_node.text = f"{title} - {labeled_ref[1]}"
 
-    # identification info
-    identification_info_node = etree.SubElement(subresource_description_node,
-                                                '{' + namespace + '}IdentificationInfo',
-                                                nsmap=CMD_NAMESPACES)
-    identifier_node = etree.SubElement(identification_info_node, '{' + namespace + '}identifier', nsmap=CMD_NAMESPACES)
-    identifier_node.text = identifier
+    # # identification info
+    # identification_info_node = etree.SubElement(subresource_description_node,
+    #                                             '{' + namespace + '}IdentificationInfo',
+    #                                             nsmap=CMD_NAMESPACES)
+    # identifier_node = etree.SubElement(identification_info_node, '{' + namespace + '}identifier', nsmap=CMD_NAMESPACES)
+    # identifier_node.text = identifier
 
     # subresource specific temporal coverage (issue date)
     for issued_date in get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dcterms:issued/text()'):
