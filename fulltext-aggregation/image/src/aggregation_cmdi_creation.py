@@ -12,8 +12,8 @@ from lxml import etree
 
 from common import CMD_NS, CMDP_NS_RECORD, CMDP_NS_COLLECTION_RECORD, CMD_NAMESPACES
 from common import xpath, get_unique_xpath_values
-from common import normalize_identifier, xml_id, is_valid_date, get_optional_env_var
-from env import COLLECTION_DISPLAY_NAME, LANDING_PAGE_URL, CMDI_RECORDS_BASE_URL
+from common import normalize_identifier, xml_id, is_valid_date
+from env import COLLECTION_DISPLAY_NAME, LANDING_PAGE_URL, CMDI_RECORDS_BASE_URL, PRETTY_CMDI_XML
 
 LANDING_PAGE_ID = 'landing_page'
 EDM_DUMP_PROXY_ID = 'archive_edm'
@@ -23,16 +23,20 @@ FULL_TEXT_RECORD_TEMPLATE_FILE = 'fulltextresource-template.xml'
 COLLECTION_RECORD_TEMPLATE_FILE = 'collectionrecord-template.xml'
 
 logger = logging.getLogger(__name__)
+parser = etree.XMLParser(remove_blank_text=not PRETTY_CMDI_XML)
+
+
+def make_template(filename):
+    script_path = os.path.dirname(os.path.realpath(__file__))
+    return etree.parse(f"{script_path}/{filename}", parser)
 
 
 def make_cmdi_template():
-    script_path = os.path.dirname(os.path.realpath(__file__))
-    return etree.parse(f"{script_path}/{FULL_TEXT_RECORD_TEMPLATE_FILE}")
+    return make_template(FULL_TEXT_RECORD_TEMPLATE_FILE)
 
 
 def make_collection_record_template():
-    script_path = os.path.dirname(os.path.realpath(__file__))
-    return etree.parse(f"{script_path}/{COLLECTION_RECORD_TEMPLATE_FILE}")
+    return make_template(COLLECTION_RECORD_TEMPLATE_FILE)
 
 
 def make_cmdi_record(record_file_name, template, collection_id, title, year, records, metadata_dir):
@@ -381,7 +385,7 @@ def insert_metadata_info(parent):
               </Collection>
             </ProvenanceInfo>
           </MetadataInfo>
-        ''')
+        ''', parser=parser)
     parent.insert(len(parent), metadata_info)
 
 # ###################

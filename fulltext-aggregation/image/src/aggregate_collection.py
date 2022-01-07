@@ -15,10 +15,9 @@ from common import log_progress
 from common import get_json_from_http
 from common import xpath, xpath_text_values
 from common import normalize_issue_title, normalize_identifier, date_to_year, filename_safe
-from common import get_optional_env_var, get_mandatory_env_var
 
 from common import ALL_NAMESPACES
-from env import THREAD_POOL_SIZE, IIIF_API_URL, RECORD_API_URL, RECORD_API_KEY
+from env import THREAD_POOL_SIZE, IIIF_API_URL, RECORD_API_URL, RECORD_API_KEY, PRETTY_CMDI_XML
 
 logger = logging.getLogger(__name__)
 
@@ -253,9 +252,13 @@ def generate_collection_record(input_records, collection_id, title, year_files, 
 
 def write_xml_tree_to_file(cmdi_file, file_name):
     # wrap up and write to file
-    etree.indent(cmdi_file, space="  ", level=0)
+    if PRETTY_CMDI_XML:
+        etree.indent(cmdi_file, space="  ", level=0)
     etree.cleanup_namespaces(cmdi_file, top_nsmap=ALL_NAMESPACES)
-    cmdi_file.write(file_name, encoding='utf-8', pretty_print=True, xml_declaration=True)
+    cmdi_file.write(file_name,
+                    encoding='utf-8',
+                    xml_declaration=True,
+                    pretty_print=PRETTY_CMDI_XML)
 
 
 def collect_fulltext_ids(fulltext_dir):

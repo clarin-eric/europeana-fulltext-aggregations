@@ -23,3 +23,6 @@ RECORD_API_URL = get_optional_env_var(
 THREAD_POOL_SIZE = int(get_optional_env_var(
     'FILE_PROCESSING_THREAD_POOL_SIZE',
     '10'))
+PRETTY_CMDI_XML = 'TRUE' == get_optional_env_var(
+    'PRETTY_CMDI_XML',
+    "False").upper()
