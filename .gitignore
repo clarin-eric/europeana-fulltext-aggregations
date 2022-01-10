@@ -1,3 +1,5 @@
-env.sh
-.idea
+.env
 .DS_Store
+test-input/
+test-output/
+

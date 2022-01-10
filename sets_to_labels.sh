@@ -1,1 +1,0 @@
-jq '.facets | .[].fields| .[].label'
