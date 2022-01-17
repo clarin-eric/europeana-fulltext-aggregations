@@ -173,6 +173,8 @@ def insert_component_content(components_root, title, year, edm_records, labeled_
     insert_licences(components_root, edm_records)
     # Subresources
     insert_subresource_info(components_root, edm_records, labeled_refs)
+    # Related resources
+    insert_related_resources(components_root, edm_records)
     # Metadata information
     insert_metadata_info(components_root)
 
@@ -322,6 +324,21 @@ def insert_dump_subresource_info(parent, namespace=CMDP_NS_RECORD):
         subresource_node.attrib['{' + CMD_NS + '}ref'] = dump[0]
         label_node = etree.SubElement(subresource_description_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
         label_node.text = dump[1]
+
+
+def insert_related_resources(parent, edm_records, namespace=CMDP_NS_RECORD):
+    # add landing page for each record as a related resource
+    for record in edm_records:
+        landing_pages = xpath(record, '/rdf:RDF/edm:EuropeanaAggregation/edm:landingPage/@rdf:resource')
+        titles = xpath(record, '/rdf:RDF/ore:Proxy/dc:title/text()')
+        if len(titles) > 0:
+            for landing_page in landing_pages:
+                related_resource_node = etree.SubElement(parent, '{' + namespace + '}RelatedResource', nsmap=CMD_NAMESPACES)
+                for title in titles:
+                    label_node = etree.SubElement(related_resource_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
+                    label_node.text = f"Landing page for '{title}'"
+                location_node = etree.SubElement(related_resource_node, '{' + namespace + '}location', nsmap=CMD_NAMESPACES)
+                location_node.text = landing_page
 
 
 def create_language_component(parent, language_code, namespace=CMDP_NS_RECORD):
