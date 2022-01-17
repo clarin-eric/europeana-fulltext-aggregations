@@ -116,6 +116,22 @@ def filename_safe(name):
     return re.sub(r"[^A-z0-9]", '_', name)
 
 
+def unique_filename(name, previous_names):
+    if name in previous_names:
+        original_name = name
+        new_name = name
+        idx = 1
+        while new_name in previous_names:
+            idx += 1
+            new_name = f"{original_name}_{idx}"
+        logger.info(f"Name clash! Renamed '{original_name}' to '{new_name}'")
+    else:
+        new_name = name
+
+    previous_names += [new_name]
+    return new_name
+
+
 def get_unique_xpath_values(docs, path):
     return list(dict.fromkeys(get_all_xpath_values(docs, path)))
 

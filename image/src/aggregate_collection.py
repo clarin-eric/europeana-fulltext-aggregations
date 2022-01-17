@@ -14,7 +14,7 @@ from aggregation_cmdi_creation import make_collection_record, make_collection_re
 from common import log_progress
 from common import get_json_from_http
 from common import xpath, xpath_text_values
-from common import normalize_issue_title, normalize_identifier, date_to_year, filename_safe
+from common import normalize_issue_title, normalize_identifier, date_to_year, filename_safe, unique_filename
 
 from common import ALL_NAMESPACES
 from env import THREAD_POOL_SIZE, IIIF_API_URL, RECORD_API_URL, RECORD_API_KEY, PRETTY_CMDI_XML
@@ -203,7 +203,7 @@ def generate_cmdi_records(collection_id, index, metadata_dir, output_dir):
     count = 0
     last_log = 0
 
-    files_created = []
+    filenames_history = []
     for title in index:
         files_for_years = {}
         years = index[title]
@@ -212,7 +212,7 @@ def generate_cmdi_records(collection_id, index, metadata_dir, output_dir):
             records = years[year]
 
             if file_created := generate_cmdi_record(records, collection_id, title, year,
-                                                    output_dir, metadata_dir, template):
+                                                    output_dir, metadata_dir, template, filenames_history):
                 files_for_years[year] = file_created
 
             count += 1
@@ -230,11 +230,11 @@ def generate_cmdi_records(collection_id, index, metadata_dir, output_dir):
             # Make a 'parent' record for the title that links to all years
             logger.info(f"Generating collection record for title '{title}'")
             generate_collection_record(title_records, collection_id, title, files_for_years,
-                                       output_dir, metadata_dir, collection_template)
+                                       output_dir, metadata_dir, collection_template, filenames_history)
 
 
-def generate_cmdi_record(records, collection_id, title, year, output_dir, metadata_dir, template):
-    file_name = f"{filename_safe(title + '_' + year)}.cmdi"
+def generate_cmdi_record(records, collection_id, title, year, output_dir, metadata_dir, template, previous_filenames):
+    file_name = f"{unique_filename(filename_safe(title + '_' + year), previous_filenames)}.cmdi"
     file_path = f"{output_dir}/{file_name}"
     logger.debug(f"Generating metadata file {file_path}")
     if cmdi_file := make_cmdi_record(file_name, template, collection_id, title, year, records, metadata_dir):
@@ -242,8 +242,9 @@ def generate_cmdi_record(records, collection_id, title, year, output_dir, metada
         return file_name
 
 
-def generate_collection_record(input_records, collection_id, title, year_files, output_dir, metadata_dir, template):
-    file_name = f"{filename_safe(title + '_collection')}.cmdi"
+def generate_collection_record(input_records, collection_id, title, year_files, output_dir,
+                               metadata_dir, template, previous_filenames):
+    file_name = f"{unique_filename(filename_safe(title + '_collection'), previous_filenames)}.cmdi"
     file_path = f"{output_dir}/{file_name}"
     logger.debug(f"Generating metadata file {file_path}")
     if cmdi_file := make_collection_record(file_name, template, collection_id, title, year_files, input_records, metadata_dir):
