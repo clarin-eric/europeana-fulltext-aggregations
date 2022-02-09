@@ -6,9 +6,6 @@ DOWNLOAD_DIR="${COLLECTION_TARGET_DIR}/download"
 
 
 main() {
-  SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-  START_DIR="$(pwd)"
-
   COLLECTION_ID="${1}"
 
   if ! [ "${COLLECTION_ID}" ]; then

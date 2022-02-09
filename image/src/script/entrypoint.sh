@@ -2,7 +2,6 @@
 set -e
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-START_DIR="$(pwd)"
 
 usage() {
   echo "
@@ -81,7 +80,7 @@ main() {
   if [ "${CLEAN}" = 1 ]; then
     echo "Erasing content for ${COLLECTION_ID} in ${INPUT_DIR}"
     if [ -d "${INPUT_DIR}" ]; then
-      ( cd "${INPUT_DIR}" && find . -name "${COLLECTION_ID}" -type d -maxdepth 1 -mindepth 1|xargs rm -rf )
+      ( cd "${INPUT_DIR}" && find . -name "${COLLECTION_ID}" -type d -maxdepth 1 -mindepth 1 -print0|xargs -0 rm -rf )
     else
       echo "Error: ${INPUT_DIR} not found"
     fi
