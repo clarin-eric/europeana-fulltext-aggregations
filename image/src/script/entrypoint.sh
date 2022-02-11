@@ -56,33 +56,65 @@ main() {
     echo "ERROR - No collection identifier provided"
     exit 1
   fi
-
+  
+  # retrieve input data
   if [ "${RETRIEVE}" = 1 ]; then
       "${SCRIPT_DIR}/retrieve.sh" "${COLLECTION_ID}"
   fi
-
+  
+  # process (aggregate) input data to create new data
   if [ "${AGGREGATE}" = 1 ]; then
       INPUT="${INPUT_DIR}/${COLLECTION_ID}"
       OUTPUT="${OUTPUT_DIR}/${COLLECTION_ID}"
+      NEW_OUTPUT="${OUTPUT}_temp"
 
       if ! [ -d "${INPUT}" ]; then
         echo "ERROR - Input directory does not exist. Run $0 retrieve first!"
         exit 1
       fi
-
-      mkdir -p "${OUTPUT}"
+      
+      if [ -d "${NEW_OUTPUT}" ]; then
+      	echo "Cleaning up temporary output at ${NEW_OUTPUT}"
+      	rm -rf "${NEW_OUTPUT}"
+      fi
+      
+      mkdir -p "${NEW_OUTPUT}"
       (
-        cd "${SCRIPT_DIR}/.." \
-          && python3 '__main__.py' "${COLLECTION_ID}" "${INPUT}" "${OUTPUT}"
+        if python3 '__main__.py' "${COLLECTION_ID}" "${INPUT}" "${NEW_OUTPUT}"; then
+			# success: move to final output location, replace existing if applicable
+			echo "Moving output into place"
+
+			OLD_OUTPUT="${OUTPUT}_old"
+			if [ -d "${OUTPUT}" ]; then
+				echo "Moving existing output at ${OUTPUT} out of the way"
+				mv "${OUTPUT}" "${OLD_OUTPUT}"
+			fi
+			# Move new output to old location
+			if mv "${NEW_OUTPUT}" "${OUTPUT}"; then
+				if [ -d "${OLD_OUTPUT}" ]; then
+					rm -rf "${OLD_OUTPUT}"
+				fi
+			fi
+		else
+			echo "Failed aggregation. Output left in ${NEW_OUTPUT}"
+			exit 1
+		fi
       )
   fi
-
+  
+  # clean input data and other unused content
   if [ "${CLEAN}" = 1 ]; then
     echo "Erasing content for ${COLLECTION_ID} in ${INPUT_DIR}"
     if [ -d "${INPUT_DIR}" ]; then
       ( cd "${INPUT_DIR}" && find . -name "${COLLECTION_ID}" -type d -maxdepth 1 -mindepth 1 -print0|xargs -0 rm -rf )
     else
       echo "Error: ${INPUT_DIR} not found"
+    fi
+    
+    OUTPUT_TMP="${OUTPUT_DIR}/${COLLECTION_ID}_temp"
+    if [ -d "${OUTPUT_TMP}" ]; then
+      	echo "Cleaning up temporary output at ${OUTPUT_TMP}"
+      	rm -rf "${OUTPUT_TMP}"
     fi
   fi
 }
