@@ -62,12 +62,20 @@ main() {
       "${SCRIPT_DIR}/retrieve.sh" "${COLLECTION_ID}"
   fi
   
+  if ! [ "${TEMP_OUTPUT_DIR}" ]; then
+	  TEMP_OUTPUT_DIR="${OUTPUT_DIR}/../temp"
+	  if ! [ -d "${TEMP_OUTPUT_DIR}" ] && ! mkdir -p "${TEMP_OUTPUT_DIR}"; then
+	  	echo "Error: could not make temporary output dir at ${TEMP_OUTPUT_DIR}"
+	  	exit 1
+	  fi
+  fi
+  
   # process (aggregate) input data to create new data
   if [ "${AGGREGATE}" = 1 ]; then
       INPUT="${INPUT_DIR}/${COLLECTION_ID}"
       OUTPUT="${OUTPUT_DIR}/${COLLECTION_ID}"
-      NEW_OUTPUT="${OUTPUT}_temp"
-
+      NEW_OUTPUT="${TEMP_OUTPUT_DIR}/${COLLECTION_ID}"
+      
       if ! [ -d "${INPUT}" ]; then
         echo "ERROR - Input directory does not exist. Run $0 retrieve first!"
         exit 1
@@ -111,7 +119,7 @@ main() {
       echo "Error: ${INPUT_DIR} not found"
     fi
     
-    OUTPUT_TMP="${OUTPUT_DIR}/${COLLECTION_ID}_temp"
+    OUTPUT_TMP="${TEMP_OUTPUT_DIR}/${COLLECTION_ID}"
     if [ -d "${OUTPUT_TMP}" ]; then
       	echo "Cleaning up temporary output at ${OUTPUT_TMP}"
       	rm -rf "${OUTPUT_TMP}"
