@@ -7,6 +7,8 @@ import json
 
 DEFAULT_OUTPUT_DIRECTORY = "./output"
 
+DEFAULT_USER_AGENT = 'clarin-fulltext-aggregator/1.0'
+
 CMD_NS = 'http://www.clarin.eu/cmd/1'
 CMDP_NS_RECORD = 'http://www.clarin.eu/cmd/1/profiles/clarin.eu:cr1:p_1633000337997'
 CMDP_NS_COLLECTION_RECORD = 'http://www.clarin.eu/cmd/1/profiles/clarin.eu:cr1:p_1639731773869'
@@ -30,6 +32,8 @@ ALL_NAMESPACES = {**EDM_NAMESPACES, **CMD_NAMESPACES}
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+user_agent_string = None
 
 
 def id_to_filename(value):
@@ -158,15 +162,33 @@ def id_to_fulltext_file(identifier):
     return f"{id_to_filename(identifier)}.xml"
 
 
+def get_user_agent():
+    global user_agent_string
+    if user_agent_string is None:
+        user_agent = get_optional_env_var('HTTP_USER_AGENT', DEFAULT_USER_AGENT)
+        user_agent_string = user_agent
+    else:
+        user_agent = user_agent_string
+    return user_agent
+
+
+def http_request(url, session=None):
+    headers = {
+        'User-Agent': get_user_agent()
+    }
+
+    if session is None:
+        return requests.get(url, headers=headers)
+    else:
+        return session.get(url, headers=headers)
+
+
 def get_json_from_http(url, session=None):
     logger.debug(f"Making request: {url}")
-    if session is None:
-        response = requests.get(url)
-    else:
-        response = session.get(url)
-    response_content = response.text
-    logger.debug(f"API response: {url}")
+    response = http_request(url, session)
+    logger.debug(f"API response for {url}: {response}")
 
+    response_content = response.text
     if response_content is None:
         logger.error(f"No response or invalid response from {url} ({response.status_code})")
         return None

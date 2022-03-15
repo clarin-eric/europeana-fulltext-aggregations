@@ -15,6 +15,7 @@ services:
       - COLLECTION_DISPLAY_NAME=Europeana newspapers full-text
       - API_RETRIEVAL_THREAD_POOL_SIZE=${API_RETRIEVAL_THREAD_POOL_SIZE:-1}
       - FILE_PROCESSING_THREAD_POOL_SIZE=${FILE_PROCESSING_THREAD_POOL_SIZE:-5}
+      - HTTP_USER_AGENT=${HTTP_USER_AGENT:-clarin-fulltext-aggregator/1.0}
       - PRETTY_CMDI_XML=false
     volumes:
       - "${LOCAL_OUTPUT_DIR:-./output}:/output"
