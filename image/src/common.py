@@ -27,7 +27,9 @@ CMD_NAMESPACES = {
 
 ALL_NAMESPACES = {**EDM_NAMESPACES, **CMD_NAMESPACES}
 
+logging.basicConfig()
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def id_to_filename(value):
@@ -39,14 +41,18 @@ def get_mandatory_env_var(name):
     if value is None:
         print(f"ERROR: mandatory {name} variable not set")
         exit(1)
-    return value
+    else:
+        logger.info(f'Environment provides value {name}={value}')
+        return value
 
 
 def get_optional_env_var(name, default=None):
     value = os.environ.get(name)
     if value is None:
+        logger.info(f'Using default value {name}={default}')
         return default
     else:
+        logger.info(f'Environment provides value {name}={value}')
         return value
 
 
@@ -155,15 +161,24 @@ def id_to_fulltext_file(identifier):
 def get_json_from_http(url, session=None):
     logger.debug(f"Making request: {url}")
     if session is None:
-        response = requests.get(url).text
+        response = requests.get(url)
     else:
-        response = session.get(url).text
+        response = session.get(url)
+    response_content = response.text
     logger.debug(f"API response: {url}")
+
+    if response_content is None:
+        logger.error(f"No response or invalid response from {url} ({response.status_code})")
+        return None
+
+    if response.status_code != requests.codes.ok:
+        logger.warning(f'Response status code: {response.status_code}')
+        logger.debug(f'Response content: {response_content[0:100]}...')
+
     try:
-        return json.loads(response)
+        return json.loads(response_content)
     except json.JSONDecodeError:
         logger.error(f"Error decoding response from {url}")
-        return None
 
 
 def log_progress(logr, total, current, last_log, category=None, interval_pct=5, interval=-1):
