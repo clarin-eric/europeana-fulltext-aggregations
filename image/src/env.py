@@ -20,9 +20,12 @@ LANDING_PAGE_URL = get_optional_env_var(
 RECORD_API_URL = get_optional_env_var(
     'RECORD_API_URL',
     'https://api.europeana.eu/record/v2')
-THREAD_POOL_SIZE = int(get_optional_env_var(
+FILE_PROCESSING_THREAD_POOL_SIZE = int(get_optional_env_var(
     'FILE_PROCESSING_THREAD_POOL_SIZE',
-    '10'))
+    '5'))
+API_RETRIEVAL_THREAD_POOL_SIZE = int(get_optional_env_var(
+    'API_RETRIEVAL_THREAD_POOL_SIZE',
+    '1'))
 PRETTY_CMDI_XML = 'TRUE' == get_optional_env_var(
     'PRETTY_CMDI_XML',
     "False").upper()

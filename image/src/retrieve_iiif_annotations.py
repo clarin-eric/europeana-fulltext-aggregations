@@ -4,7 +4,7 @@ from glom import glom, flatten, PathAccessError
 from multiprocessing import Pool
 
 from common import get_json_from_http
-from env import IIIF_API_URL, THREAD_POOL_SIZE
+from env import IIIF_API_URL, API_RETRIEVAL_THREAD_POOL_SIZE
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ def retrieve_annotation_refs(iiif_manifest_url, session):
     if manifest is None:
         logger.warning(f"No valid response from manifest request at {iiif_manifest_url}")
     else:
-        with Pool(THREAD_POOL_SIZE) as p:
+        with Pool(API_RETRIEVAL_THREAD_POOL_SIZE) as p:
             # collection annotation URLs for record
             canvases = glom(manifest, ('sequences', ['canvases']), skip_exc=PathAccessError)
             if canvases is not None:
@@ -70,4 +70,3 @@ def get_fulltext_ref_from_annotations(annotations):
                 return glom(resource, 'resource.@id', skip_exc=PathAccessError)
 
     return None
-

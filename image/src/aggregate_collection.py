@@ -17,7 +17,7 @@ from common import xpath, xpath_text_values
 from common import normalize_issue_title, normalize_identifier, date_to_year, filename_safe, unique_filename
 
 from common import ALL_NAMESPACES
-from env import THREAD_POOL_SIZE, IIIF_API_URL, RECORD_API_URL, RECORD_API_KEY, PRETTY_CMDI_XML
+from env import FILE_PROCESSING_THREAD_POOL_SIZE, IIIF_API_URL, RECORD_API_URL, RECORD_API_KEY, PRETTY_CMDI_XML
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ def make_md_index(metadata_dir):
         map_lock = manager.Lock()
         with requests.Session() as session:
             indexer = FileProcessor(md_index, metadata_dir, session, total, part_of_title_map, map_lock)
-            with Pool(int(THREAD_POOL_SIZE)) as p:
+            with Pool(int(FILE_PROCESSING_THREAD_POOL_SIZE)) as p:
                 data = p.map(indexer.process, files)
 
         for item in data:
