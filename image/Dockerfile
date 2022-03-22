@@ -1,4 +1,4 @@
-FROM registry.gitlab.com/clarin-eric/docker-alpine-base:2.1.1
+FROM registry.gitlab.com/clarin-eric/docker-alpine-base:2.1.2
 
 ENV OUTPUT_DIR=/output/result
 ENV TEMP_OUTPUT_DIR=/output/temp
