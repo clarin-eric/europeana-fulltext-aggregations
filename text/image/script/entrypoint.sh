@@ -35,7 +35,10 @@ main() {
 		echo "Processing data set ${DATA_SET}"
 		ZIP_URL="${FULLTEXT_BASE_URL}/${DATA_SET}.zip"
 		ZIP_TARGET="${TEMP_DIR}/${DATA_SET}.zip"
-		CONTENT_DIR="${TEMP_DIR}/${DATA_SET}"	
+		CONTENT_DIR="${TEMP_DIR}/${DATA_SET}"
+		DATA_SET_OUTPUT_DIR="${OUTPUT_DIR}/${DATA_SET}"
+		
+		mkdir -p "${DATA_SET_OUTPUT_DIR}"
 
 		# retrieve fulltext zip
 		echo "Retrieving zip file from ${ZIP_URL}..."
@@ -60,7 +63,7 @@ main() {
 	
 		# transform
 		echo "Extracting text to output directory..."
-		java "${SAXON_JAVA_OPTS[@]}" -jar "${SAXON_JAR_PATH}" -s:"${XML_DIR}" -o:"${OUTPUT_DIR}" -xsl:"${EDM2TXT_XSLT_PATH}"
+		java "${SAXON_JAVA_OPTS[@]}" -jar "${SAXON_JAR_PATH}" -s:"${XML_DIR}" -o:"${DATA_SET_OUTPUT_DIR}" -xsl:"${EDM2TXT_XSLT_PATH}"
 	
 		# clean up content
 		if [ "${DO_CLEAN_UP}" = 'true' ]; then
