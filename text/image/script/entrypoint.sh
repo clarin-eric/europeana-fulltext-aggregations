@@ -48,7 +48,7 @@ main() {
 		# extract
 		echo "Uncompressing..."
 		mkdir -p "${CONTENT_DIR}"
-		7z x "${_7Z_OPTS[@]}" -o "${CONTENT_DIR}" "${ZIP_TARGET}"
+		7z x "${_7Z_OPTS[@]}" -y -o"${CONTENT_DIR}" "${ZIP_TARGET}"
 		if [ "${DO_CLEAN_UP}" = 'true' ]; then
 			echo "Cleaning up zip"
 			rm -rf "${ZIP_TARGET}"
