@@ -64,7 +64,11 @@ main() {
 	
 		# transform
 		echo "Extracting text to output directory..."
-		java "${SAXON_JAVA_OPTS[@]}" -jar "${SAXON_JAR_PATH}" -s:"${XML_DIR}" -o:"${DATA_SET_OUTPUT_DIR}" -xsl:"${EDM2TXT_XSLT_PATH}"
+		java "${SAXON_JAVA_OPTS[@]}" -jar "${SAXON_JAR_PATH}" \
+			-s:"${XML_DIR}" \
+			-o:"${DATA_SET_OUTPUT_DIR}" \
+			-xsl:"${EDM2TXT_XSLT_PATH}" \
+			-threads:"${SAXON_THREADS:-1}"
 	
 		# clean up content
 		if [ "${DO_CLEAN_UP}" = 'true' ]; then
