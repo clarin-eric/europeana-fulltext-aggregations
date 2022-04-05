@@ -9,7 +9,7 @@ FULLTEXT_BASE_URL="${FULLTEXT_BASE_URL:-ftp://download.europeana.eu/newspapers/f
 
 SAXON_JAVA_OPTS=("-Djdk.xml.entityExpansionLimit=${JDK_XML_ENTITY_EXPANSION_LIMIT:-60000000}")
 WGET_OPTS=()
-UNZIP_OPTS=()
+_7Z_OPTS=()
 
 echo "OUTPUT_DIR: ${OUTPUT_DIR?err}"
 echo "FULLTEXT_BASE_URL: ${FULLTEXT_BASE_URL?err}"
@@ -17,9 +17,10 @@ echo "FULLTEXT_BASE_URL: ${FULLTEXT_BASE_URL?err}"
 if [ "${DEBUG}" = 'true' ]; then
 	echo "Debug enabled"
 	set -x
+	_7Z_OPTS+=(-bb3)
 else
 	WGET_OPTS+=(-q)
-	UNZIP_OPTS+=(-q)
+	_7Z_OPTS+=(-bd -bb0 -bt)
 fi
 
 if [ "${DO_CLEAN_UP}" != 'true' ]; then
@@ -47,7 +48,7 @@ main() {
 		# extract
 		echo "Uncompressing..."
 		mkdir -p "${CONTENT_DIR}"
-		unzip "${UNZIP_OPTS[@]}" "${ZIP_TARGET}" -d "${CONTENT_DIR}"
+		7z x "${_7Z_OPTS[@]}" -o "${CONTENT_DIR}" "${ZIP_TARGET}"
 		if [ "${DO_CLEAN_UP}" = 'true' ]; then
 			echo "Cleaning up zip"
 			rm -rf "${ZIP_TARGET}"
