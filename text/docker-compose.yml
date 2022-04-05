@@ -6,19 +6,7 @@ services:
     environment:
       - OUTPUT_DIR=/output
       - DO_CLEAN_UP=true
-      #- FULLTEXT_BASE_URL=ftp://download.europeana.eu/newspapers/fulltext/edm_issue/
-#      - RECORD_API_KEY=${RECORD_API_KEY:?Europeana API key must be set}
-#      - CMDI_RECORDS_BASE_URL=${CMDI_RECORDS_BASE_URL:?Records base URL be set}
-#      - METADATA_PATH=/input/metadata
-#      - FULLTEXT_PATH=/input/fulltext
-#      - OUTPUT_DIR=/output
-#      - IIIF_API_URL=https://iiif.europeana.eu
-#      - RECORD_API_URL=https://api.europeana.eu/record/v2
-#      - LANDING_PAGE_URL=https://pro.europeana.eu/page/iiif#download
-#      - COLLECTION_DISPLAY_NAME=Europeana newspapers full-text
-#      - API_RETRIEVAL_THREAD_POOL_SIZE=${API_RETRIEVAL_THREAD_POOL_SIZE:-1}
-#      - FILE_PROCESSING_THREAD_POOL_SIZE=${FILE_PROCESSING_THREAD_POOL_SIZE:-5}
-#      - HTTP_USER_AGENT=${HTTP_USER_AGENT:-clarin-fulltext-aggregator/1.0}
-#      - PRETTY_CMDI_XML=false
+      - DEBUG=${DEBUG:-false}
+      # - JDK_XML_ENTITY_EXPANSION_LIMIT=60000000
     volumes:
       - "${LOCAL_OUTPUT_DIR:-./output}:/output"

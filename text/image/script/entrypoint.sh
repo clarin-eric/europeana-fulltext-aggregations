@@ -1,44 +1,83 @@
 #!/bin/bash
 set -e
 
+DEBUG="${DEBUG:-false}"
 DO_CLEAN_UP="${DO_CLEAN_UP:-true}"
 OUTPUT_DIR="${OUTPUT_DIR:-/output}"
 TEMP_DIR="$(mktemp -d)"
 FULLTEXT_BASE_URL="${FULLTEXT_BASE_URL:-ftp://download.europeana.eu/newspapers/fulltext/edm_issue}"
 
-if ! [ -d "${OUTPUT_DIR}" ]; then
-	echo "Error: output dir '${OUTPUT_DIR}' does not exist"
+SAXON_JAVA_OPTS=("-Djdk.xml.entityExpansionLimit=${JDK_XML_ENTITY_EXPANSION_LIMIT:-60000000}")
+WGET_OPTS=()
+UNZIP_OPTS=()
+
+echo "OUTPUT_DIR: ${OUTPUT_DIR?err}"
+echo "FULLTEXT_BASE_URL: ${FULLTEXT_BASE_URL?err}"
+
+if [ "${DEBUG}" = 'true' ]; then
+	echo "Debug enabled"
+	set -x
+else
+	WGET_OPTS+=(-q)
+	UNZIP_OPTS+=(-q)
 fi
 
 if [ "${DO_CLEAN_UP}" != 'true' ]; then
 	echo "Warning: cleaning up disabled!"
 fi
 
-for DATA_SET in "$@"; do
-	echo "Processing data set ${DATA_SET}"
-	ZIP_URL="${FULLTEXT_BASE_URL}/${DATA_SET}.zip"
-	ZIP_TARGET="${TEMP_DIR}/${DATA_SET}.zip"
-	CONTENT_DIR="${TEMP_DIR}/${DATA_SET}"	
+if ! [ -d "${OUTPUT_DIR}" ]; then
+	echo "Error: output dir '${OUTPUT_DIR}' does not exist"
+fi
 
-	# retrieve fulltext zip
-	echo "Retrieving zip file from ${ZIP_URL}..."
-	wget -q -O "${ZIP_TARGET}" "${ZIP_URL}"
+main() {
+	for DATA_SET in "$@"; do
+		echo "Processing data set ${DATA_SET}"
+		ZIP_URL="${FULLTEXT_BASE_URL}/${DATA_SET}.zip"
+		ZIP_TARGET="${TEMP_DIR}/${DATA_SET}.zip"
+		CONTENT_DIR="${TEMP_DIR}/${DATA_SET}"	
+
+		# retrieve fulltext zip
+		echo "Retrieving zip file from ${ZIP_URL}..."
+		get_and_check_md5 "${ZIP_TARGET}" "${ZIP_URL}" "${ZIP_URL}.md5sum"
 	
-	# extract
-	echo "Decompressing..."
-	mkdir -p "${CONTENT_DIR}"
-	unzip -q "${ZIP_TARGET}" -d "${CONTENT_DIR}"
-	if [ "${DO_CLEAN_UP}" = 'true' ]; then
-		echo "Cleaning up zip"
-		rm -rf "${ZIP_TARGET}"
-	fi
+		# extract
+		echo "Uncompressing..."
+		mkdir -p "${CONTENT_DIR}"
+		unzip "${UNZIP_OPTS[@]}" "${ZIP_TARGET}" -d "${CONTENT_DIR}"
+		if [ "${DO_CLEAN_UP}" = 'true' ]; then
+			echo "Cleaning up zip"
+			rm -rf "${ZIP_TARGET}"
+		fi
+		
+		XML_DIR="${CONTENT_DIR}/${DATA_SET}"
+		echo "$(find "${XML_DIR}" -maxdepth 1 -type f -name '*.xml'|wc -l) XML files in ${XML_DIR}"
+		
+		if ! [ -d "${XML_DIR}" ]; then
+			echo "Error: XML content directory not found at expected location ${XML_DIR}"
+			exit 1
+		fi
 	
-	# transform
-	java -jar "${SAXON_JAR_PATH}" -xsl:"${EDM2TXT_XSLT_PATH}" -s:"${CONTENT_DIR}" -o:"${OUTPUT_DIR}"
+		# transform
+		echo "Extracting text to output directory..."
+		java "${SAXON_JAVA_OPTS[@]}" -jar "${SAXON_JAR_PATH}" -s:"${XML_DIR}" -o:"${OUTPUT_DIR}" -xsl:"${EDM2TXT_XSLT_PATH}"
 	
-	# clean up content
-	if [ "${DO_CLEAN_UP}" = 'true' ]; then
-		echo "Cleaning up decompressed content"
-		rm -rf "${CONTENT_DIR}"
-	fi
-done
+		# clean up content
+		if [ "${DO_CLEAN_UP}" = 'true' ]; then
+			echo "Cleaning up uncompressed content"
+			rm -rf "${CONTENT_DIR}"
+		fi
+	done
+}
+
+get_and_check_md5() {
+	OUT="$1"
+	URL="$2"
+	MD5_URL="$3"
+	
+	MD5="$(wget -q -O - ${MD5_URL})"
+	wget "${WGET_OPTS[@]}" -O "${OUT}" "${URL}" \
+		&& echo "${MD5}  ${OUT}" | md5sum -c
+}
+
+main "$@"
