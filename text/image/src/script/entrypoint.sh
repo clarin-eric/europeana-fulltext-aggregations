@@ -2,12 +2,21 @@
 set -e
 
 COLLECTION_ID="$1"
-DEBUG="${DEBUG:-false}"
 OUTPUT_DIR="${OUTPUT_DIR:-/output}"
-DUMP_FTP_BASE_URL="${DUMP_FTP_BASE_URL:-ftp://download.europeana.eu/newspapers/fulltext/edm_issue}"
 
-cd /app
+main() {
+  if ! [ "${COLLECTION_ID}" ]; then
+    usage; exit 1
+  fi
 
-python3 '__main__.py' "${COLLECTION_ID}" "${OUTPUT_DIR}"
+  cd /app
+  python3 '__main__.py' "${COLLECTION_ID}" "${OUTPUT_DIR}"
+}
+
+usage() {
+  echo "
+  Usage: ${0} <collection id>
+  "
+}
 
 main "$@"
