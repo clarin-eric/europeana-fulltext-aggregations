@@ -1,17 +1,18 @@
 import logging
+import os
+import time
 
-from black import out
 from stream_unzip import stream_unzip
 from io import BytesIO
 from lxml import etree
-import os
+
 
 logger = logging.getLogger(__name__)
 
 ZIP_BASE_PATH = '/Users/twagoo/Documents/Projects/Europeana/fulltext/dumps/edm-issue'
 ZIP_BASE_FTP_URL = 'ftp://download.europeana.eu/newspapers/fulltext/edm_issue'
 
-xml_parser = etree.XMLParser(resolve_entities=False)
+xml_parser = etree.XMLParser(resolve_entities=False, huge_tree=True, remove_pis=True)
 
 EDM_NAMESPACES = {
     'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
@@ -26,15 +27,21 @@ def main(collection_id, output_dir):
     logging.basicConfig()
     logger.setLevel(logging.INFO)
 
+    start_time = time.perf_counter()
+    logger.info(f'Retrieving and extracting fulltext from dump for collection {collection_id}')
     chunks_generator = zipped_chunks_local(collection_id)
     # chunks_generator = zipped_chunks_ftp(collection_id)
-    for file_name, file_size, unzipped_chunks in stream_unzip(chunks_generator):
-
+    for file_name_b, file_size, unzipped_chunks in stream_unzip(chunks_generator):
+        file_name = file_name_b.decode()
         logger.info(f'Reading file from zip: {file_name}')
         xml = read_file_from_zip(file_name, unzipped_chunks)
+        logger.debug('Extracting text')
         text = extract_text(BytesIO(xml))
-
+        logger.debug('Writing text to file')
         write_to_file(text, output_dir, file_name)
+
+    time_elapsed = time.perf_counter() - start_time
+    logger.info(f'Completed in {time_elapsed/60:0.0f}m{(time_elapsed%60):02.0f}s')
 
 
 def read_file_from_zip(file_name, chunks):
@@ -54,7 +61,7 @@ def extract_text(source):
 
 
 def write_to_file(text, output_dir, file_name):
-    file_name_base = os.path.splitext(file_name.decode())[0]
+    file_name_base = os.path.splitext(file_name)[0]
     output_file = f'{output_dir}/{file_name_base}.txt'
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     with open(output_file, 'w') as f:
