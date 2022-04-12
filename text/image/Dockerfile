@@ -1,26 +1,30 @@
-FROM registry.gitlab.com/clarin-eric/docker-alpine-supervisor-java-base:openjdk11-2.1.7
+FROM registry.gitlab.com/clarin-eric/docker-alpine-base:2.1.5
 
-ENV SAXON_HE_VERSION=10.8
-ENV SAXON_JAR_SHA512=a7b91ddfbefa4cab5d0c1df92e5cf2473ec5638338bb84e20fb18ad128410a7eb2e4a3a05c0b373e77ae0ea9e29ee05c7ad92f294117e594ede3a1ad6cd26ffd
+ENV OUTPUT_DIR=/output
 
-ENV APP_DIR=/app
-ENV DATA_DIR=/data
-ENV SAXON_JAR_PATH=/app/saxon.jar
-ENV EDM2TXT_XSLT_PATH=/app/edm2txt.xsl 
+# set up worker user
+RUN adduser -D worker \
+    && mkdir -p ${OUTPUT_DIR} && chown worker ${OUTPUT_DIR} && chmod og+r ${OUTPUT_DIR}
 
-RUN \
-  apk add --no-cache \
-    p7zip=16.02-r4 \
-  && mkdir -p /app \
-  && wget -O "${SAXON_JAR_PATH}" \
-    "https://search.maven.org/remotecontent?filepath=net/sf/saxon/Saxon-HE/${SAXON_HE_VERSION}/Saxon-HE-${SAXON_HE_VERSION}.jar" \
-  && echo "${SAXON_JAR_SHA512}  ${SAXON_JAR_PATH}" | sha512sum -c
+# copy script
+COPY --chown=worker:worker src/requirements.txt /app/requirements.txt
+WORKDIR /app
 
-COPY script/entrypoint.sh /app/entrypoint.sh
-COPY script/edm2txt.xsl $EDM2TXT_XSLT_PATH
+COPY --chown=worker:worker src/requirements.txt /app/requirements.txt
 
-ENTRYPOINT ["/app/entrypoint.sh"]
+# install packages and required python libraries
+RUN apk add --no-cache \
+    python3=3.9.5-r2 \
+    py3-pip=20.3.4-r1 \
+    py3-lxml=4.6.3-r1 \
+    gcc=10.3.1_git20210424-r2 \
+    musl-dev=1.2.2-r3 \
+    && python3 -m pip install --no-cache-dir pip==22.0.3 \
+    && python3 -m pip install --no-cache-dir -r requirements.txt \
+    && apk del gcc musl-dev
+
+COPY --chown=worker:worker src/ /app/
+
+USER worker
+ENTRYPOINT [ "script/entrypoint.sh" ]
 CMD []
-
-RUN mkdir /data
-WORKDIR /data

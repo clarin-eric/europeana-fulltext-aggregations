@@ -5,9 +5,7 @@ services:
     build: ./image
     environment:
       - OUTPUT_DIR=/output
-      - DO_CLEAN_UP=true
-      - DEBUG=${DEBUG:-false}
-      - SAXON_THREADS=${SAXON_THREADS:-2}
+      # - DUMP_FTP_BASE_URL=...
       # - JDK_XML_ENTITY_EXPANSION_LIMIT=60000000
     volumes:
       - "${LOCAL_OUTPUT_DIR:-./output}:/output"

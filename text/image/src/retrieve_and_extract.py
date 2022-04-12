@@ -10,7 +10,9 @@ from lxml import etree
 logger = logging.getLogger(__name__)
 
 ZIP_BASE_PATH = '/Users/twagoo/Documents/Projects/Europeana/fulltext/dumps/edm-issue'
+# TODO: get from environment variable DUMP_FTP_BASE_URL
 ZIP_BASE_FTP_URL = 'ftp://download.europeana.eu/newspapers/fulltext/edm_issue'
+
 
 xml_parser = etree.XMLParser(resolve_entities=False, huge_tree=True, remove_pis=True)
 
