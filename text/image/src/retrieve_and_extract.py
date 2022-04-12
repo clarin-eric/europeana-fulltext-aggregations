@@ -1,7 +1,9 @@
 import logging
 import os
+import re
 import time
 import threading
+import json
 
 from stream_unzip import stream_unzip
 from io import BytesIO
@@ -15,15 +17,13 @@ logger = logging.getLogger(__name__)
 BLOCK_SIZE = 65536
 ZIP_BASE_PATH = os.environ.get('DUMP_BASE_PATH')
 ZIP_BASE_FTP_URL = os.environ.get('DUMP_FTP_BASE_URL')
+MAP_FILE_NAME = os.environ.get('MAP_FILE_NAME', default='id_file_map.json')
 
 xml_parser = etree.XMLParser(resolve_entities=False, huge_tree=True, remove_pis=True)
 
 EDM_NAMESPACES = {
     'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
-    'ore': 'http://www.openarchives.org/ore/terms/',
-    'edm': 'http://www.europeana.eu/schemas/edm/',
-    'dc': 'http://purl.org/dc/elements/1.1/',
-    'dcterms': 'http://purl.org/dc/terms/',
+    'edm': 'http://www.europeana.eu/schemas/edm/'
 }
 
 
@@ -37,16 +37,25 @@ def main(collection_id, output_dir):
     start_time = time.perf_counter()
     logger.info(f'Retrieving and extracting fulltext from dump for collection {collection_id}')
 
-    chunks_generator = create_dump_chunk_generator(collection_id)
+    id_file_map = {}
 
+    chunks_generator = create_dump_chunk_generator(collection_id)
     for file_name_b, file_size, unzipped_chunks in stream_unzip(chunks_generator):
         file_name = file_name_b.decode()
+        output_file = f'{os.path.splitext(file_name)[0]}.txt'
+        full_output_path = f'{output_dir}/{output_file}'
+
         logger.info(f'Reading file from zip: {file_name}')
         xml = read_file_from_zip(file_name, unzipped_chunks)
         logger.debug('Extracting text')
-        text = extract_text(BytesIO(xml))
+        text = process_xml(BytesIO(xml), id_file_map, os.path.basename(output_file))
         logger.debug('Writing text to file')
-        write_to_file(text, output_dir, file_name)
+        write_to_file(text, full_output_path)
+
+    map_file = f'{os.path.realpath(output_dir)}/{collection_id}/{MAP_FILE_NAME}'
+    logger.info(f'Writing id -> file name map to {map_file}')
+    with open(map_file, 'w') as f:
+        json.dump(id_file_map, f)
 
     time_elapsed = time.perf_counter() - start_time
     logger.info(f'Completed in {time_elapsed/60:0.0f}m{(time_elapsed%60):02.0f}s')
@@ -70,16 +79,23 @@ def read_file_from_zip(file_name, chunks):
     return xml
 
 
-def extract_text(source):
+def process_xml(source, id_file_map, output_file):
     tree = etree.parse(source, xml_parser)
-    node = tree.xpath('/rdf:RDF/edm:FullTextResource/rdf:value', namespaces=EDM_NAMESPACES)
-    if len(node) > 0:
-        return node[0].text
+    # get identifier and add to map
+    if id_file_map is not None:
+        root_node = tree.xpath('/rdf:RDF', namespaces=EDM_NAMESPACES)
+        if len(root_node) > 0:
+            record_id = root_node[0].get('{http://www.w3.org/XML/1998/namespace}base')
+            if record_id:
+                id_file_map[normalize_identifier(record_id)] = output_file
+
+    # get text content and return
+    text_node = tree.xpath('/rdf:RDF/edm:FullTextResource/rdf:value', namespaces=EDM_NAMESPACES)
+    if len(text_node) > 0:
+        return text_node[0].text
 
 
-def write_to_file(text, output_dir, file_name):
-    file_name_base = os.path.splitext(file_name)[0]
-    output_file = f'{output_dir}/{file_name_base}.txt'
+def write_to_file(text, output_file):
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     with open(output_file, 'w') as f:
         logger.info(f'Writing text to {os.path.realpath(output_file)}')
@@ -131,3 +147,15 @@ def zipped_chunks_local(collection_id):
                 yield data
             else:
                 break
+
+
+def normalize_identifier(identifier):
+    # ex. http://data.theeuropeanlibrary.org/BibliographicResource/3000118435146
+    # ex. http://data.europeana.eu/annotation/9200396/BibliographicResource_3000118435009
+    match = re.search(r"http.*[^\d](\d+)$", identifier)
+    if match:
+        logger.debug(f"Normalised identifier: {identifier} -> {match.group(1)}")
+        return match.group(1)
+    else:
+        logger.warning(f"Identifier {identifier} does not match pattern, skipping normalisation!")
+        return identifier
