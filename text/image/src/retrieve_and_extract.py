@@ -10,7 +10,7 @@ from io import BytesIO
 from lxml import etree
 from ftplib import FTP
 from urllib.parse import urlparse
-from queue import SimpleQueue
+from queue import Queue
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +114,7 @@ def zipped_chunks_ftp(collection_id):
     ftp.login()
     ftp.cwd(parsed_url.path)
 
-    queue = SimpleQueue()
+    queue = Queue(1000)
 
     def ftp_thread_target():
         ftp.retrbinary(f'RETR {file}', callback=queue.put, blocksize=BLOCK_SIZE)
