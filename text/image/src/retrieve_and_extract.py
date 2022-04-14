@@ -62,7 +62,7 @@ def main(collection_id, output_dir):
         json.dump(id_file_map, f)
 
     time_elapsed = time.perf_counter() - start_time
-    logger.info(f'Completed in {time_elapsed/60:0.0f}m{(time_elapsed%60):02.0f}s')
+    logger.info(f'Completed processing of {collection_id} in {time_elapsed/60:0.0f}m{(time_elapsed%60):02.0f}s')
 
 
 def create_dump_chunk_generator(collection_id):
