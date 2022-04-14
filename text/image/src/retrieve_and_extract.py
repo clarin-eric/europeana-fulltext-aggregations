@@ -14,7 +14,8 @@ from queue import Queue
 
 logger = logging.getLogger(__name__)
 
-BLOCK_SIZE = 65536
+ENV_BLOCK_SIZE = os.environ.get('BLOCK_SIZE', default='65536')
+ENV_QUEUE_SIZE_LIMIT = os.environ.get('QUEUE_SIZE_LIMIT', default='1024')
 ZIP_BASE_PATH = os.environ.get('DUMP_BASE_PATH')
 ZIP_BASE_FTP_URL = os.environ.get('DUMP_FTP_BASE_URL')
 MAP_FILE_NAME = os.environ.get('MAP_FILE_NAME', default='id_file_map.json')
@@ -25,6 +26,9 @@ EDM_NAMESPACES = {
     'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
     'edm': 'http://www.europeana.eu/schemas/edm/'
 }
+
+block_size = int(ENV_BLOCK_SIZE)
+queue_size_limit = int(ENV_QUEUE_SIZE_LIMIT)
 
 
 def main(collection_id, output_dir):
@@ -114,10 +118,10 @@ def zipped_chunks_ftp(collection_id):
     ftp.login()
     ftp.cwd(parsed_url.path)
 
-    queue = Queue(1000)
+    queue = Queue(queue_size_limit)
 
     def ftp_thread_target():
-        ftp.retrbinary(f'RETR {file}', callback=queue.put, blocksize=BLOCK_SIZE)
+        ftp.retrbinary(f'RETR {file}', callback=queue.put, blocksize=block_size)
         queue.put(None)
 
     logger.info(f'Starting retrieval from {ftp.host}')
@@ -140,9 +144,9 @@ def zipped_chunks_ftp(collection_id):
 def zipped_chunks_local(collection_id):
     path = f'{ZIP_BASE_PATH}/{collection_id}.zip'
     logger.info(f'Opening {path}')
-    with open(path, mode='rb', buffering=2*BLOCK_SIZE) as f:
+    with open(path, mode='rb', buffering=2*block_size) as f:
         while True:
-            data = f.read(BLOCK_SIZE)
+            data = f.read(block_size)
             if data:
                 yield data
             else:
