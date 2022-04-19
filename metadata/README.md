@@ -1,4 +1,4 @@
-# Europeana fulltext resource aggregation
+# Europeana fulltext resource metadata aggregation
 Produces [CMDI](https://www.clarin.eu/cmdi) metadata for Europeana Newspapers full text content made available via 
 [dumps](https://pro.europeana.eu/page/iiif#download) and an
 [API](https://github.com/europeana/fulltext) (deployed at https://iiif.europeana.eu).
