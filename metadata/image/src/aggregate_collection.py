@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import requests
 import time
 import re
 
@@ -60,10 +59,9 @@ def make_md_index(metadata_dir):
     with Manager() as manager:
         part_of_title_map = manager.dict()
         map_lock = manager.Lock()
-        with requests.Session() as session:
-            indexer = FileProcessor(md_index, metadata_dir, session, total, part_of_title_map, map_lock)
-            with Pool(int(FILE_PROCESSING_THREAD_POOL_SIZE)) as p:
-                data = p.map(indexer.process, files)
+        indexer = FileProcessor(md_index, metadata_dir, total, part_of_title_map, map_lock)
+        with Pool(int(FILE_PROCESSING_THREAD_POOL_SIZE)) as p:
+            data = p.map(indexer.process, files)
 
         for item in data:
             # non-matching files yield no response
@@ -79,10 +77,9 @@ def make_md_index(metadata_dir):
 
 class FileProcessor:
 
-    def __init__(self, md_index, metadata_dir, session, total, part_of_title_map, map_lock):
+    def __init__(self, md_index, metadata_dir, total, part_of_title_map, map_lock):
         self.md_index = md_index
         self.metadata_dir = metadata_dir
-        self.session = session
         self.total = total
         self.count = 0
         self.last_log = 0

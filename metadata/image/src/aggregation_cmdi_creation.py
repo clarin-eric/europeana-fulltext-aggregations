@@ -229,21 +229,44 @@ def insert_licences(parent, edm_records, namespace=CMDP_NS_RECORD):
 
 def insert_subresource_info(components_root, edm_records, namespace=CMDP_NS_RECORD):
     insert_dump_subresource_info(components_root, namespace)
-    # info for annotations (per record)
+    # info for each issue (record)
     for record in edm_records:
-        identifiers = get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:identifier/text()')
-        for identifier in identifiers:
-            normalized_id = normalize_identifier(identifier)
-            # TODO: add subresources for issues
-            # # get record (annotation ref, label) tuple from dictionary
-            # labeled_refs = labeled_refs_dict.get(normalized_id, None)
-            # if labeled_refs is not None:
-            #     index = 0
-            #     # one resource proxy per (ref, label) tuple
-            #     for labeled_ref in labeled_refs:
-            #         index += 1
-            #         insert_annotation_subresource_info(components_root, record, identifier, normalized_id,
-            #                                            labeled_ref, index, namespace)
+        insert_issue_subresource_info(components_root, record, namespace)
+
+
+def insert_issue_subresource_info(parent, record, namespace=CMDP_NS_RECORD):
+    identifiers = get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:identifier/text()')
+    subresource_node = etree.SubElement(parent, '{' + namespace + '}Subresource', nsmap=CMD_NAMESPACES)
+    subresource_description_node = etree.SubElement(subresource_node,
+                                                    '{' + namespace + '}SubresourceDescription',
+                                                    nsmap=CMD_NAMESPACES)
+
+    # title info
+    for title in get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:title/text()'):
+        label_node = etree.SubElement(subresource_description_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
+        label_node.text = f"{title}"
+
+    # identifier(s)
+    for identifier in identifiers:
+        identification_info_node = etree.SubElement(subresource_description_node,
+                                                    '{' + namespace + '}IdentificationInfo',
+                                                    nsmap=CMD_NAMESPACES)
+
+        normalized_id = normalize_identifier(identifier)
+        if identifier != normalized_id:
+            identifier_node = etree.SubElement(identification_info_node, '{' + namespace + '}identifier',
+                                               nsmap=CMD_NAMESPACES)
+            identifier_node.text = identifier
+        identifier_node = etree.SubElement(identification_info_node, '{' + namespace + '}identifier',
+                                           nsmap=CMD_NAMESPACES)
+        identifier_node.text = normalized_id
+
+    # languages
+    for language_code in get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:language/text()'):
+        create_language_component(subresource_description_node, language_code, namespace)
+
+    # TODO: temporal coverage
+    # TODO: geolocation
 
 
 def insert_annotation_subresource_info(parent, record, identifier, normalized_id, labeled_ref, index, namespace):
