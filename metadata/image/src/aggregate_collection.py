@@ -5,7 +5,7 @@ import requests
 import time
 import re
 
-from glom import glom, PathAccessError, flatten
+from glom import glom, PathAccessError
 from lxml import etree
 from multiprocessing import Pool, Manager
 
@@ -17,7 +17,7 @@ from common import xpath, xpath_text_values
 from common import normalize_issue_title, normalize_identifier, date_to_year, filename_safe, unique_filename
 
 from common import ALL_NAMESPACES
-from env import FILE_PROCESSING_THREAD_POOL_SIZE, IIIF_API_URL, RECORD_API_URL, RECORD_API_KEY, PRETTY_CMDI_XML
+from env import FILE_PROCESSING_THREAD_POOL_SIZE, RECORD_API_URL, RECORD_API_KEY, PRETTY_CMDI_XML
 
 logger = logging.getLogger(__name__)
 
@@ -72,8 +72,7 @@ def make_md_index(metadata_dir):
                              identifier=item['identifier'],
                              titles=item['titles'],
                              years=item['years'],
-                             filename=item['filename'],
-                             manifest_urls=item['manifest_urls'])
+                             filename=item['filename'])
 
     return md_index
 
@@ -114,23 +113,11 @@ class FileProcessor:
                 years = [date_to_year(date)
                          for date in xpath_text_values(doc, '/rdf:RDF/ore:Proxy/dcterms:issued')]
 
-                # ideally we can get the IIIF manifest URL
-                iiif_manifest_urls = xpath(doc, '/rdf:RDF/edm:WebResource/dcterms:isReferencedBy/@rdf:resource')
-                if iiif_manifest_urls is not None:
-                    manifest_urls = [ref for ref in set(iiif_manifest_urls) if ref.startswith(IIIF_API_URL)]
-
-                # if this does not work, we can construct one based on the CHO id
-                if manifest_urls is None or len(manifest_urls) == 0:
-                    constructed = construct_iiif_reference(doc)
-                    if constructed:
-                        manifest_urls = [constructed]
-
                 return {
                     'identifier': identifier,
                     'titles': titles,
                     'years': years,
-                    'filename': filename,
-                    'manifest_urls': manifest_urls
+                    'filename': filename
                 }
 
         except etree.Error as err:
@@ -177,7 +164,7 @@ class FileProcessor:
                                     return title
 
 
-def add_to_index(index, identifier, titles, years, filename, manifest_urls):
+def add_to_index(index, identifier, titles, years, filename):
     for title in titles:
         if title not in index:
             index[title] = {}
@@ -185,8 +172,7 @@ def add_to_index(index, identifier, titles, years, filename, manifest_urls):
             if year not in index[title]:
                 index[title][year] = {}
             index[title][year][identifier] = {
-                'file': filename,
-                'manifest_urls': manifest_urls
+                'file': filename
             }
 
 
@@ -247,7 +233,8 @@ def generate_collection_record(input_records, collection_id, title, year_files, 
     file_name = f"{unique_filename(filename_safe(title + '_collection'), previous_filenames)}.xml"
     file_path = f"{output_dir}/{file_name}"
     logger.debug(f"Generating metadata file {file_path}")
-    if cmdi_file := make_collection_record(file_name, template, collection_id, title, year_files, input_records, metadata_dir):
+    if cmdi_file := make_collection_record(file_name, template, collection_id, title, year_files,
+                                           input_records, metadata_dir):
         write_xml_tree_to_file(cmdi_file, file_path)
 
 
@@ -303,17 +290,17 @@ def extract_fulltext_record_id(file_path):
 # --------- Helpers ---------
 
 
-def construct_iiif_reference(doc):
-    cho_identifier = xpath(doc, '/rdf:RDF/edm:ProvidedCHO/@rdf:about')
-    if len(cho_identifier) == 1:
-        # example identifier value:
-        # http://data.europeana.eu/item/9200356/BibliographicResource_3000100359046
-        match = re.search(r'\/([^\/]+\/[^\/]+)$', cho_identifier[0])
-        if match:
-            # example manifest URL:
-            # https://iiif.europeana.eu/presentation/9200356/BibliographicResource_3000100359046/manifest
-            return f"{IIIF_API_URL}/presentation/{match.group(1)}/manifest"
-    return None
+# def construct_iiif_reference(doc):
+#     cho_identifier = xpath(doc, '/rdf:RDF/edm:ProvidedCHO/@rdf:about')
+#     if len(cho_identifier) == 1:
+#         # example identifier value:
+#         # http://data.europeana.eu/item/9200356/BibliographicResource_3000100359046
+#         match = re.search(r'\/([^\/]+\/[^\/]+)$', cho_identifier[0])
+#         if match:
+#             # example manifest URL:
+#             # https://iiif.europeana.eu/presentation/9200356/BibliographicResource_3000100359046/manifest
+#             return f"{IIIF_API_URL}/presentation/{match.group(1)}/manifest"
+#     return None
 
 
 def test_run():
