@@ -36,10 +36,6 @@ def aggregate(collection_id, metadata_dir, output_dir):
     logger.info("Making index for metadata")
     index = make_md_index(metadata_dir)
 
-    # save index to file in output directory
-    logger.info(f"Writing index to file")
-    save_index(index, f"{output_dir}/index.json")
-
     # generate CMDI for the indexed property combinations
     logger.info(f"Creating CMDI record for items in index in {output_dir}")
     generate_cmdi_records(collection_id, index, metadata_dir, output_dir)
@@ -171,11 +167,6 @@ def add_to_index(index, identifier, titles, years, filename):
             index[title][year][identifier] = {
                 'file': filename
             }
-
-
-def save_index(index, index_filename):
-    with open(index_filename, 'w') as output_file:
-        json.dump(index, output_file, indent=True)
 
 
 def generate_cmdi_records(collection_id, index, metadata_dir, output_dir):
