@@ -265,8 +265,30 @@ def insert_issue_subresource_info(parent, record, namespace=CMDP_NS_RECORD):
     for language_code in get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:language/text()'):
         create_language_component(subresource_description_node, language_code, namespace)
 
-    # TODO: temporal coverage
-    # TODO: geolocation
+    # temporal coverage
+    for issue_date in get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dcterms:issued/text()'):
+        temporal_coverage_node = etree.SubElement(subresource_description_node, '{' + namespace + '}TemporalCoverage',
+                                                  nsmap=CMD_NAMESPACES)
+        label_node = etree.SubElement(temporal_coverage_node, '{' + namespace + '}label',
+                                      nsmap=CMD_NAMESPACES)
+        label_node.text = issue_date
+        start = etree.SubElement(etree.SubElement(
+            temporal_coverage_node, '{' + namespace + '}Start', nsmap=CMD_NAMESPACES),
+            '{' + namespace + '}date', nsmap=CMD_NAMESPACES)
+        start.text = issue_date
+        end = etree.SubElement(etree.SubElement(
+            temporal_coverage_node, '{' + namespace + '}End', nsmap=CMD_NAMESPACES),
+            '{' + namespace + '}date', nsmap=CMD_NAMESPACES)
+        end.text = issue_date
+
+    # geolocation
+    for country in get_unique_xpath_values([record], '/rdf:RDF/edm:EuropeanaAggregation/edm:country/text()'):
+        geolocation_node = etree.SubElement(subresource_description_node, '{' + namespace + '}GeoLocation', nsmap=CMD_NAMESPACES)
+        label_node = etree.SubElement(geolocation_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
+        label_node.text = country
+        country_node = etree.SubElement(geolocation_node, '{' + namespace + '}Country', nsmap=CMD_NAMESPACES)
+        country_label_node = etree.SubElement(country_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
+        country_label_node.text = country
 
 
 def insert_annotation_subresource_info(parent, record, identifier, normalized_id, labeled_ref, index, namespace):
