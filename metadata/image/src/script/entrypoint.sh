@@ -72,10 +72,23 @@ main() {
         fi
       fi
 
-      INPUT="${INPUT_DIR}/${COLLECTION_ID}" \
-      OUTPUT="${OUTPUT_DIR}/${COLLECTION_ID}" \
-      NEW_OUTPUT="${TEMP_OUTPUT_DIR}/${COLLECTION_ID}" \
-      bash "${SCRIPT_DIR}/aggregate.sh"
+      INPUT="${INPUT_DIR}/${COLLECTION_ID}"
+      OUTPUT="${OUTPUT_DIR}/${COLLECTION_ID}"
+      NEW_OUTPUT="${TEMP_OUTPUT_DIR}/${COLLECTION_ID}"
+      export INPUT OUTPUT NEW_OUTPUT
+      if bash "${SCRIPT_DIR}/aggregate.sh"; then
+        echo "Done. Archiving results..."
+        # zip output (TODO: make optional?)
+        ZIP_TARGET="${OUTPUT_DIR}/${COLLECTION_ID}.zip"
+        if [ -e "${ZIP_TARGET}" ]; then
+          rm "${ZIP_TARGET}"
+        fi
+        zip -jrq "${ZIP_TARGET}" "${OUTPUT}"
+        echo "Results archived in ${ZIP_TARGET}"
+      else
+        echo "Aggregation failed"
+        exit 1
+      fi
   fi
   
   # clean input data and other unused content

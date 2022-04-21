@@ -9,6 +9,7 @@ RUN apk add --no-cache \
     python3=3.9.5-r2 \
     py3-pip=20.3.4-r1 \
     p7zip=16.02-r4 \
+    zip=3.0-r9 \
     py3-lxml=4.6.3-r1 \
     && python3 -m pip install --no-cache-dir pip==22.0.4
 
