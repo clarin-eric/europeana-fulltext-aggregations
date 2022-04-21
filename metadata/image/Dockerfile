@@ -10,7 +10,7 @@ RUN apk add --no-cache \
     py3-pip=20.3.4-r1 \
     p7zip=16.02-r4 \
     py3-lxml=4.6.3-r1 \
-    && python3 -m pip install --no-cache-dir pip==22.0.3
+    && python3 -m pip install --no-cache-dir pip==22.0.4
 
 # set up worker user
 RUN adduser -D worker \

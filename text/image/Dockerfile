@@ -19,7 +19,7 @@ RUN apk add --no-cache \
     py3-lxml=4.6.3-r1 \
     gcc=10.3.1_git20210424-r2 \
     musl-dev=1.2.2-r3 \
-    && python3 -m pip install --no-cache-dir pip==22.0.3 \
+    && python3 -m pip install --no-cache-dir pip==22.0.4 \
     && python3 -m pip install --no-cache-dir -r requirements.txt \
     && apk del gcc musl-dev
 
