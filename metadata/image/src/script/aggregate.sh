@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-if ! [ "${INPUT}" ] && [ "${OUTPUT}" ] && [ "${NEW_OUTPUT}" ]; then
-  echo "Error: one or more mandatory variable(s) not set (INPUT, OUTPUT, NEW_OUTPUT)"
+if ! ([ "${INPUT}" ] && [ "${OUTPUT}" ] && [ "${NEW_OUTPUT}" ] && [ "${COLLECTION_ID}" ]); then
+  echo "Error: one or more mandatory variable(s) not set (INPUT, OUTPUT, NEW_OUTPUT, COLLECTION_ID)"
   exit 1
 fi
 

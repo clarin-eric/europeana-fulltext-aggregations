@@ -75,7 +75,7 @@ main() {
       INPUT="${INPUT_DIR}/${COLLECTION_ID}"
       OUTPUT="${OUTPUT_DIR}/${COLLECTION_ID}"
       NEW_OUTPUT="${TEMP_OUTPUT_DIR}/${COLLECTION_ID}"
-      export INPUT OUTPUT NEW_OUTPUT
+      export COLLECTION_ID INPUT OUTPUT NEW_OUTPUT
       if bash "${SCRIPT_DIR}/aggregate.sh"; then
         echo "Done. Archiving results..."
         # zip output (TODO: make optional?)
