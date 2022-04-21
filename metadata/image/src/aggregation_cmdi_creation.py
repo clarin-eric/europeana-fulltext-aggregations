@@ -145,8 +145,6 @@ def insert_component_content(components_root, title, year, edm_records):
     insert_licences(components_root, edm_records)
     # Subresources
     insert_subresource_info(components_root, edm_records)
-    # # Related resources
-    # insert_related_resources(components_root, edm_records)
     # Metadata information
     insert_metadata_info(components_root)
 
@@ -285,54 +283,25 @@ def insert_issue_subresource_info(parent, record, namespace=CMDP_NS_RECORD):
         label_node = etree.SubElement(temporal_coverage_node, '{' + namespace + '}label',
                                       nsmap=CMD_NAMESPACES)
         label_node.text = issue_date
-        start = etree.SubElement(etree.SubElement(
-            temporal_coverage_node, '{' + namespace + '}Start', nsmap=CMD_NAMESPACES),
-            '{' + namespace + '}date', nsmap=CMD_NAMESPACES)
-        start.text = issue_date
-        end = etree.SubElement(etree.SubElement(
-            temporal_coverage_node, '{' + namespace + '}End', nsmap=CMD_NAMESPACES),
-            '{' + namespace + '}date', nsmap=CMD_NAMESPACES)
-        end.text = issue_date
+        if is_valid_date(issue_date):
+            start = etree.SubElement(etree.SubElement(
+                temporal_coverage_node, '{' + namespace + '}Start', nsmap=CMD_NAMESPACES),
+                '{' + namespace + '}date', nsmap=CMD_NAMESPACES)
+            start.text = issue_date
+            end = etree.SubElement(etree.SubElement(
+                temporal_coverage_node, '{' + namespace + '}End', nsmap=CMD_NAMESPACES),
+                '{' + namespace + '}date', nsmap=CMD_NAMESPACES)
+            end.text = issue_date
 
     # geolocation
     for country in get_unique_xpath_values([record], '/rdf:RDF/edm:EuropeanaAggregation/edm:country/text()'):
-        geolocation_node = etree.SubElement(subresource_description_node, '{' + namespace + '}GeoLocation', nsmap=CMD_NAMESPACES)
+        geolocation_node = etree.SubElement(subresource_description_node, '{' + namespace + '}GeoLocation',
+                                            nsmap=CMD_NAMESPACES)
         label_node = etree.SubElement(geolocation_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
         label_node.text = country
         country_node = etree.SubElement(geolocation_node, '{' + namespace + '}Country', nsmap=CMD_NAMESPACES)
         country_label_node = etree.SubElement(country_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
         country_label_node.text = country
-
-
-def insert_annotation_subresource_info(parent, record, identifier, normalized_id, labeled_ref, index, namespace):
-    subresource_node = etree.SubElement(parent, '{' + namespace + '}Subresource', nsmap=CMD_NAMESPACES)
-    # cmd:ref attribute
-    subresource_node.attrib['{' + CMD_NS + '}ref'] = make_ref_xml_id(normalized_id, index)
-
-    subresource_description_node = etree.SubElement(subresource_node,
-                                                    '{' + namespace + '}SubresourceDescription',
-                                                    nsmap=CMD_NAMESPACES)
-
-    # title info
-    for title in get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:title/text()'):
-        label_node = etree.SubElement(subresource_description_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
-        label_node.text = f"{title} - {labeled_ref[1]}"
-
-    # # identification info
-    # identification_info_node = etree.SubElement(subresource_description_node,
-    #                                             '{' + namespace + '}IdentificationInfo',
-    #                                             nsmap=CMD_NAMESPACES)
-    # identifier_node = etree.SubElement(identification_info_node, '{' + namespace + '}identifier', nsmap=CMD_NAMESPACES)
-    # identifier_node.text = identifier
-
-    # subresource specific temporal coverage (issue date)
-    for issued_date in get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dcterms:issued/text()'):
-        if is_valid_date(issued_date):
-            temporal_coverage_node = etree.SubElement(subresource_description_node,
-                                                      '{' + namespace + '}TemporalCoverage',
-                                                      nsmap=CMD_NAMESPACES)
-            label_node = etree.SubElement(temporal_coverage_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
-            label_node.text = issued_date
 
 
 def insert_dump_subresource_info(parent, namespace=CMDP_NS_RECORD):
@@ -347,21 +316,6 @@ def insert_dump_subresource_info(parent, namespace=CMDP_NS_RECORD):
         subresource_node.attrib['{' + CMD_NS + '}ref'] = dump[0]
         label_node = etree.SubElement(subresource_description_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
         label_node.text = dump[1]
-
-
-def insert_related_resources(parent, edm_records, namespace=CMDP_NS_RECORD):
-    # add landing page for each record as a related resource
-    for record in edm_records:
-        landing_pages = xpath(record, '/rdf:RDF/edm:EuropeanaAggregation/edm:landingPage/@rdf:resource')
-        titles = xpath(record, '/rdf:RDF/ore:Proxy/dc:title/text()')
-        if len(titles) > 0:
-            for landing_page in landing_pages:
-                related_resource_node = etree.SubElement(parent, '{' + namespace + '}RelatedResource', nsmap=CMD_NAMESPACES)
-                for title in titles:
-                    label_node = etree.SubElement(related_resource_node, '{' + namespace + '}label', nsmap=CMD_NAMESPACES)
-                    label_node.text = f"Landing page for '{title}'"
-                location_node = etree.SubElement(related_resource_node, '{' + namespace + '}location', nsmap=CMD_NAMESPACES)
-                location_node.text = landing_page
 
 
 def create_language_component(parent, language_code, namespace=CMDP_NS_RECORD):
@@ -529,7 +483,8 @@ def collection_insert_title_and_description(parent, title, years):
 def collection_insert_temporal_coverage(parent, year_lower, year_higher):
     temporal_coverage_node = etree.SubElement(parent, '{' + CMDP_NS_COLLECTION_RECORD + '}TemporalCoverage',
                                               nsmap=CMD_NAMESPACES)
-    label_node = etree.SubElement(temporal_coverage_node, '{' + CMDP_NS_COLLECTION_RECORD + '}label', nsmap=CMD_NAMESPACES)
+    label_node = etree.SubElement(temporal_coverage_node, '{' + CMDP_NS_COLLECTION_RECORD + '}label',
+                                  nsmap=CMD_NAMESPACES)
     label_node.text = f"{year_lower} - {year_higher}"
     start_year = etree.SubElement(etree.SubElement(
         temporal_coverage_node, '{' + CMDP_NS_COLLECTION_RECORD + '}Start', nsmap=CMD_NAMESPACES),
@@ -545,8 +500,6 @@ def collection_insert_subresource_info(parent, title, year_files, namespace=CMDP
     insert_dump_subresource_info(parent, namespace)
     # Subresource info for metadata links
     for year in sorted(year_files):
-        file = year_files[year]
-
         subresource_node = etree.SubElement(parent,
                                             '{' + namespace + '}Subresource', nsmap=CMD_NAMESPACES)
         subresource_description_node = etree.SubElement(subresource_node,
@@ -569,10 +522,6 @@ def make_edm_dump_ref(collection_id):
 
 def make_alto_dump_ref(collection_id):
     return f"ftp://download.europeana.eu/newspapers/fulltext/alto/{collection_id}.zip"
-
-
-def make_ref_xml_id(record_id,index):
-    return xml_id(f"{record_id}_anno{index}")
 
 
 def make_record_page_ref(page_ref):
