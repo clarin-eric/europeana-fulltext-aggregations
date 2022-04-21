@@ -61,53 +61,21 @@ main() {
   if [ "${RETRIEVE}" = 1 ]; then
       "${SCRIPT_DIR}/retrieve.sh" "${COLLECTION_ID}"
   fi
-  
-  if ! [ "${TEMP_OUTPUT_DIR}" ]; then
-	  TEMP_OUTPUT_DIR="${OUTPUT_DIR}/../temp"
-	  if ! [ -d "${TEMP_OUTPUT_DIR}" ] && ! mkdir -p "${TEMP_OUTPUT_DIR}"; then
-	  	echo "Error: could not make temporary output dir at ${TEMP_OUTPUT_DIR}"
-	  	exit 1
-	  fi
-  fi
-  
+
   # process (aggregate) input data to create new data
   if [ "${AGGREGATE}" = 1 ]; then
-      INPUT="${INPUT_DIR}/${COLLECTION_ID}"
-      OUTPUT="${OUTPUT_DIR}/${COLLECTION_ID}"
-      NEW_OUTPUT="${TEMP_OUTPUT_DIR}/${COLLECTION_ID}"
-      
-      if ! [ -d "${INPUT}" ]; then
-        echo "ERROR - Input directory does not exist. Run $0 retrieve first!"
-        exit 1
+      if ! [ "${TEMP_OUTPUT_DIR}" ]; then
+        TEMP_OUTPUT_DIR="${OUTPUT_DIR}/../temp"
+        if ! [ -d "${TEMP_OUTPUT_DIR}" ] && ! mkdir -p "${TEMP_OUTPUT_DIR}"; then
+          echo "Error: could not make temporary output dir at ${TEMP_OUTPUT_DIR}"
+          exit 1
+        fi
       fi
-      
-      if [ -d "${NEW_OUTPUT}" ]; then
-      	echo "Cleaning up temporary output at ${NEW_OUTPUT}"
-      	rm -rf "${NEW_OUTPUT}"
-      fi
-      
-      mkdir -p "${NEW_OUTPUT}"
-      (
-        if python3 '__main__.py' "${COLLECTION_ID}" "${INPUT}" "${NEW_OUTPUT}"; then
-			# success: move to final output location, replace existing if applicable
-			echo "Moving output into place"
 
-			OLD_OUTPUT="${OUTPUT}_old"
-			if [ -d "${OUTPUT}" ]; then
-				echo "Moving existing output at ${OUTPUT} out of the way"
-				mv "${OUTPUT}" "${OLD_OUTPUT}"
-			fi
-			# Move new output to old location
-			if mv "${NEW_OUTPUT}" "${OUTPUT}"; then
-				if [ -d "${OLD_OUTPUT}" ]; then
-					rm -rf "${OLD_OUTPUT}"
-				fi
-			fi
-		else
-			echo "Failed aggregation. Output left in ${NEW_OUTPUT}"
-			exit 1
-		fi
-      )
+      INPUT="${INPUT_DIR}/${COLLECTION_ID}" \
+      OUTPUT="${OUTPUT_DIR}/${COLLECTION_ID}" \
+      NEW_OUTPUT="${TEMP_OUTPUT_DIR}/${COLLECTION_ID}" \
+      bash "${SCRIPT_DIR}/aggregate.sh"
   fi
   
   # clean input data and other unused content
