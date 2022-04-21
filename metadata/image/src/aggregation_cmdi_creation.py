@@ -15,6 +15,7 @@ LANDING_PAGE_ID = 'landing_page'
 EDM_DUMP_PROXY_ID = 'archive_edm'
 ALTO_DUMP_PROXY_ID = 'archive_alto'
 DUMP_MEDIA_TYPE = 'application/zip'
+RECORD_PAGE_MEDIA_TYPE = 'text/html'
 FULL_TEXT_RECORD_TEMPLATE_FILE = 'fulltextresource-template.xml'
 COLLECTION_RECORD_TEMPLATE_FILE = 'collectionrecord-template.xml'
 
@@ -35,8 +36,11 @@ def make_collection_record_template():
     return make_template(COLLECTION_RECORD_TEMPLATE_FILE)
 
 
-def make_cmdi_record(record_file_name, template, collection_id, title, year, records, metadata_dir):
+def make_cmdi_record(record_file_name, template, collection_id, title, year, records_map, metadata_dir):
     cmdi_file = deepcopy(template)
+
+    # load EDM metadata records
+    edm_records = load_emd_records(records_map, metadata_dir)
 
     # Metadata headers
     set_metadata_headers(cmdi_file, collection_id, record_file_name)
@@ -47,7 +51,7 @@ def make_cmdi_record(record_file_name, template, collection_id, title, year, rec
         logger.error("Expecting exactly one components root element")
         return None
     else:
-        insert_resource_proxies(resource_proxies_list[0], collection_id)
+        insert_resource_proxies(resource_proxies_list[0], collection_id, edm_records)
 
     # Component section
     components_root = xpath(cmdi_file, f"/cmd:CMD/cmd:Components/cmdp:TextResource")
@@ -55,8 +59,6 @@ def make_cmdi_record(record_file_name, template, collection_id, title, year, rec
         logger.error("Expecting exactly one components root element")
         return None
     else:
-        # load EDM metadata records
-        edm_records = load_emd_records(records, metadata_dir)
         # insert component content
         insert_component_content(components_root[0], title, year, edm_records)
 
@@ -97,7 +99,7 @@ def set_metadata_headers(doc, collection_id, record_file_name):
         collection_name_header[0].text = COLLECTION_DISPLAY_NAME
 
 
-def insert_resource_proxies(resource_proxies_list, collection_id):
+def insert_resource_proxies(resource_proxies_list, collection_id, edm_records):
     # landing page
     insert_resource_proxy(resource_proxies_list, LANDING_PAGE_ID, "LandingPage", LANDING_PAGE_URL)
 
@@ -106,6 +108,12 @@ def insert_resource_proxies(resource_proxies_list, collection_id):
                           make_edm_dump_ref(collection_id), DUMP_MEDIA_TYPE)
     insert_resource_proxy(resource_proxies_list, ALTO_DUMP_PROXY_ID, "Resource",
                           make_alto_dump_ref(collection_id), DUMP_MEDIA_TYPE)
+
+    # record landing pages
+    for record_page_ref in get_unique_xpath_values(
+            edm_records, '/rdf:RDF/edm:EuropeanaAggregation/edm:landingPage/@rdf:resource'):
+        insert_resource_proxy(resource_proxies_list, make_record_page_ref(record_page_ref), "Resource",
+                              record_page_ref, RECORD_PAGE_MEDIA_TYPE)
 
 
 def insert_resource_proxy(parent, proxy_id, resource_type, ref, media_type=None):
@@ -137,8 +145,8 @@ def insert_component_content(components_root, title, year, edm_records):
     insert_licences(components_root, edm_records)
     # Subresources
     insert_subresource_info(components_root, edm_records)
-    # Related resources
-    insert_related_resources(components_root, edm_records)
+    # # Related resources
+    # insert_related_resources(components_root, edm_records)
     # Metadata information
     insert_metadata_info(components_root)
 
@@ -235,11 +243,16 @@ def insert_subresource_info(components_root, edm_records, namespace=CMDP_NS_RECO
 
 
 def insert_issue_subresource_info(parent, record, namespace=CMDP_NS_RECORD):
-    identifiers = get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:identifier/text()')
     subresource_node = etree.SubElement(parent, '{' + namespace + '}Subresource', nsmap=CMD_NAMESPACES)
     subresource_description_node = etree.SubElement(subresource_node,
                                                     '{' + namespace + '}SubresourceDescription',
                                                     nsmap=CMD_NAMESPACES)
+
+    # proxy ref
+    record_page_ref = get_unique_xpath_values(
+        [record], '/rdf:RDF/edm:EuropeanaAggregation/edm:landingPage/@rdf:resource')
+    if len(record_page_ref) > 0:
+        subresource_node.attrib['{' + CMD_NS + '}ref'] = make_record_page_ref(record_page_ref[0])
 
     # title info
     for title in get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:title/text()'):
@@ -247,7 +260,7 @@ def insert_issue_subresource_info(parent, record, namespace=CMDP_NS_RECORD):
         label_node.text = f"{title}"
 
     # identifier(s)
-    for identifier in identifiers:
+    for identifier in get_unique_xpath_values([record], '/rdf:RDF/ore:Proxy/dc:identifier/text()'):
         identification_info_node = etree.SubElement(subresource_description_node,
                                                     '{' + namespace + '}IdentificationInfo',
                                                     nsmap=CMD_NAMESPACES)
@@ -560,6 +573,10 @@ def make_alto_dump_ref(collection_id):
 
 def make_ref_xml_id(record_id,index):
     return xml_id(f"{record_id}_anno{index}")
+
+
+def make_record_page_ref(page_ref):
+    return f"rp_{normalize_identifier(page_ref)}"
 
 
 def today_string():
