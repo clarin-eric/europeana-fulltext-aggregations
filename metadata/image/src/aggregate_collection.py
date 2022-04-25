@@ -231,10 +231,11 @@ def write_xml_tree_to_file(cmdi_file, file_name):
     if PRETTY_CMDI_XML:
         etree.indent(cmdi_file, space="  ", level=0)
     etree.cleanup_namespaces(cmdi_file, top_nsmap=ALL_NAMESPACES)
-    cmdi_file.write(file_name,
-                    encoding='utf-8',
-                    xml_declaration=True,
-                    pretty_print=PRETTY_CMDI_XML)
+    with open(file_name, 'wb') as file:
+        cmdi_file.write(file,
+                        encoding='utf-8',
+                        xml_declaration=True,
+                        pretty_print=PRETTY_CMDI_XML)
 
 
 def collect_fulltext_ids(fulltext_dir):
