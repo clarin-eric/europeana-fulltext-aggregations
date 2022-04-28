@@ -6,8 +6,8 @@ import requests
 import json
 
 DEFAULT_OUTPUT_DIRECTORY = "./output"
-
 DEFAULT_USER_AGENT = 'clarin-fulltext-aggregator/1.0'
+MAX_FILENAME_LENGTH = 128
 
 CMD_NS = 'http://www.clarin.eu/cmd/1'
 CMDP_NS_RECORD = 'http://www.clarin.eu/cmd/1/profiles/clarin.eu:cr1:p_1633000337997'
@@ -123,7 +123,7 @@ def normalize_issue_title(title):
 
 
 def filename_safe(name):
-    return re.sub(r"[^A-z0-9]", '_', name)
+    return re.sub(r"[^A-z0-9]", '_', name[0:MAX_FILENAME_LENGTH])
 
 
 def unique_filename(name, previous_names):

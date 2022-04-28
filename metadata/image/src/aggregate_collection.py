@@ -21,6 +21,7 @@ from env import FILE_PROCESSING_THREAD_POOL_SIZE, RECORD_API_URL, RECORD_API_KEY
 logger = logging.getLogger(__name__)
 
 EDM_ID_PATTERN = re.compile(r'^[A-z]+://data.europeana.eu/item/([^/]+/[^/]+)$')
+MAX_TITLE_LENGTH = 100
 
 
 def aggregate(collection_id, metadata_dir, output_dir):
@@ -208,7 +209,7 @@ def generate_cmdi_records(collection_id, index, metadata_dir, output_dir):
 
 
 def generate_cmdi_record(records, collection_id, title, year, output_dir, metadata_dir, template, previous_filenames):
-    file_name = f"{unique_filename(filename_safe(title + '_' + year), previous_filenames)}.xml"
+    file_name = f"{unique_filename(filename_safe(title[0:MAX_TITLE_LENGTH] + '_' + year), previous_filenames)}.xml"
     file_path = f"{output_dir}/{file_name}"
     logger.debug(f"Generating metadata file {file_path}")
     if cmdi_file := make_cmdi_record(file_name, template, collection_id, title, year, records, metadata_dir):
