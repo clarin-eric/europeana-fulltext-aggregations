@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 ENV_BLOCK_SIZE = os.environ.get('BLOCK_SIZE', default='65536')
 ENV_QUEUE_SIZE_LIMIT = os.environ.get('QUEUE_SIZE_LIMIT', default='1024')
 ZIP_BASE_PATH = os.environ.get('DUMP_BASE_PATH')
-ZIP_BASE_FTP_URL = os.environ.get('DUMP_FTP_BASE_URL')
+ZIP_BASE_URL = os.environ.get('DUMP_BASE_URL')
 MAP_FILE_NAME = os.environ.get('MAP_FILE_NAME', default='id_file_map.json')
 
 xml_parser = etree.XMLParser(resolve_entities=False, huge_tree=True, remove_pis=True)
@@ -66,7 +66,7 @@ def main(collection_id, output_dir):
 
 
 def create_dump_chunk_generator(collection_id):
-    if ZIP_BASE_FTP_URL:
+    if ZIP_BASE_URL:
         return zipped_chunks_ftp(collection_id)
     if ZIP_BASE_PATH:
         return zipped_chunks_local(collection_id)
@@ -108,9 +108,9 @@ def write_to_file(text, output_file):
 
 def zipped_chunks_ftp(collection_id):
     file = f'{collection_id}.zip'
-    logger.info(f'Opening {ZIP_BASE_FTP_URL}/{file}')
+    logger.info(f'Opening {ZIP_BASE_URL}/{file}')
 
-    parsed_url = urlparse(ZIP_BASE_FTP_URL)
+    parsed_url = urlparse(ZIP_BASE_URL)
     if parsed_url.scheme != 'ftp':
         logger.warning(f'Configured base URL is "{parsed_url.scheme}", expecting "ftp"')
 

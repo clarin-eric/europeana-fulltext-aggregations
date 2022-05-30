@@ -5,7 +5,7 @@ services:
     build: ./image
     environment:
       - OUTPUT_DIR=/output
-      - DUMP_FTP_BASE_URL=${DUMP_FTP_BASE_URL:-ftp://download.europeana.eu/newspapers/fulltext/edm_issue}
+      - DUMP_BASE_URL=${DUMP_BASE_URL:-ftp://download.europeana.eu/newspapers/fulltext/edm_issue}
       - QUEUE_SIZE_LIMIT=${QUEUE_SIZE_LIMIT:-1024}
       - BLOCK_SIZE=${BLOCK_SIZE:-65536}
       - DEBUG=${DEBUG:-false}
