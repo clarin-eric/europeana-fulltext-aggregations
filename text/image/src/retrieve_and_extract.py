@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import requests
 import time
 import threading
 import json
@@ -51,10 +52,16 @@ def main(collection_id, output_dir):
 
         logger.info(f'Reading file from zip: {file_name}')
         xml = read_file_from_zip(file_name, unzipped_chunks)
-        logger.debug('Extracting text')
-        text = process_xml(BytesIO(xml), id_file_map, os.path.basename(output_file))
-        logger.debug('Writing text to file')
-        write_to_file(text, full_output_path)
+        if xml:
+            logger.debug('Extracting text')
+            text = process_xml(BytesIO(xml), id_file_map, os.path.basename(output_file))
+            if text:
+                logger.debug('Writing text to file')
+                write_to_file(text, full_output_path)
+            else:
+                logger.error(f'No text extracted from XML! File: {file_name}')
+        else:
+            logger.error(f'No XML extracted from archive! File: {file_name}')
 
     map_file = f'{os.path.realpath(output_dir)}/{collection_id}/{MAP_FILE_NAME}'
     logger.info(f'Writing id -> file name map to {map_file}')
@@ -67,7 +74,15 @@ def main(collection_id, output_dir):
 
 def create_dump_chunk_generator(collection_id):
     if ZIP_BASE_URL:
-        return zipped_chunks_ftp(collection_id)
+        parsed_url = urlparse(ZIP_BASE_URL)
+        if parsed_url.scheme == 'ftp':
+            return zipped_chunks_ftp(parsed_url, collection_id)
+        else:
+            if parsed_url.scheme in ('http', 'https'):
+                return zipped_chunks_http(parsed_url, collection_id)
+            else:
+                logger.error(f"Don't know how to handle URL: {ZIP_BASE_URL}")
+                exit(1)
     if ZIP_BASE_PATH:
         return zipped_chunks_local(collection_id)
     else:
@@ -106,13 +121,26 @@ def write_to_file(text, output_file):
         f.write(text)
 
 
-def zipped_chunks_ftp(collection_id):
-    file = f'{collection_id}.zip'
-    logger.info(f'Opening {ZIP_BASE_URL}/{file}')
+def zipped_chunks_http(base_url, collection_id):
+    if base_url.scheme not in ('http', 'https'):
+        logger.warning(f'Configured base URL is "{base_url.scheme}", expecting "http(s)"')
 
-    parsed_url = urlparse(ZIP_BASE_URL)
+    file = f'{collection_id}.zip'
+    logger.info(f'Streaming {ZIP_BASE_URL}/{file} over HTTP(S)')
+
+    with requests.get(f'{base_url.geturl()}/{file}', stream=True) as r:
+        r.raise_for_status()
+        for chunk in r.iter_content(chunk_size=block_size):
+            if chunk:
+                yield chunk
+
+
+def zipped_chunks_ftp(parsed_url, collection_id):
     if parsed_url.scheme != 'ftp':
         logger.warning(f'Configured base URL is "{parsed_url.scheme}", expecting "ftp"')
+
+    file = f'{collection_id}.zip'
+    logger.info(f'Streaming {ZIP_BASE_URL}/{file} over FTP')
 
     ftp = FTP(parsed_url.hostname)
     ftp.login()
